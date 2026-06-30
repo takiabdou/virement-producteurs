@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class CRMA(models.Model):
@@ -38,3 +39,42 @@ class BureauLocal(models.Model):
 
     def __str__(self):
         return f"{self.code} - {self.nom} ({self.crma.code})"
+
+
+class Profil(models.Model):
+
+    ROLE_CHOICES = [
+        ('superuser', 'Super-utilisateur national'),
+        ('sous_superuser', 'Sous-super-utilisateur CRMA'),
+        ('utilisateur', 'Utilisateur Bureau Local'),
+    ]
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='profil'
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        default='utilisateur'
+    )
+    bureau_local = models.ForeignKey(
+        BureauLocal,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='utilisateurs'
+    )
+    crma = models.ForeignKey(
+        CRMA,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sous_superusers'
+    )
+    poste = models.CharField(max_length=100, blank=True)
+    telephone = models.CharField(max_length=20, blank=True)
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} [{self.get_role_display()}]"
