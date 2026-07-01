@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block titre %}Virement Producteurs{% endblock %}</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        nav {
+            background: #1a5276; color: white; padding: 0.8rem 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        nav a { color: white; text-decoration: none; margin-left: 1rem; }
+        nav a:hover { text-decoration: underline; }
+        .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+        .card {
+            background: white; border-radius: 8px; padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;
+        }
+        h1 { color: #1a5276; margin-bottom: 1.2rem; font-size: 1.5rem; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #eaf0fb; color: #1a5276; font-weight: bold; }
+        tr:hover { background: #f9f9f9; }
+        .btn {
+            display: inline-block; padding: 0.5rem 1rem; border-radius: 4px;
+            text-decoration: none; font-size: 0.9rem; cursor: pointer; border: none;
+        }
+        .btn-bleu { background: #1a5276; color: white; }
+        .btn-vert { background: #1e8449; color: white; }
+        .btn-rouge { background: #c0392b; color: white; }
+        .btn-gris { background: #95a5a6; color: white; }
+        .messages { margin-bottom: 1rem; }
+        .messages .success { color: #1e8449; background: #eafaf1;
+            padding: 0.6rem 1rem; border-radius: 4px; margin-bottom: 0.5rem; }
+        .messages .error { color: #c0392b; background: #fdedec;
+            padding: 0.6rem 1rem; border-radius: 4px; margin-bottom: 0.5rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.3rem;
+            font-weight: bold; color: #333; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 0.6rem; border: 1px solid #ccc;
+            border-radius: 4px; font-size: 1rem;
+        }
+        .form-actions { margin-top: 1.5rem; display: flex; gap: 0.8rem; }
+    </style>
+</head>
+<body>
+<nav>
+    <span><strong>Virement Producteurs</strong></span>
+    <div>
+        {% if user.is_authenticated %}
+            <span>{{ user.get_full_name|default:user.username }}</span>
+            {% if user.profil.role == 'superuser' %}
+                <a href="{% url 'crma_liste' %}">CRMA</a>
+            {% endif %}
+            <a href="{% url 'deconnexion' %}">Déconnexion</a>
+        {% endif %}
+    </div>
+</nav>
+<div class="container">
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="{{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% block contenu %}{% endblock %}
+</div>
+</body>
+</html>

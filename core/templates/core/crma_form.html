@@ -1,0 +1,23 @@
+{% extends 'core/base.html' %}
+{% block titre %}{{ titre }}{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>{{ titre }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-group">
+            <label>{{ field.label }}</label>
+            {{ field }}
+            {% if field.errors %}
+                <span style="color:red">{{ field.errors.0 }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-vert">Enregistrer</button>
+            <a href="{% url 'crma_liste' %}" class="btn btn-gris">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

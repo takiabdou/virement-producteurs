@@ -1,7 +1,10 @@
-from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.shortcuts import render, redirect, get_object_or_404
+from .models import CRMA, BureauLocal, Profil
+from .forms import CRMAForm, BureauLocalForm, UserCreationFormCustom, ProfilForm
+from .decorators import role_required
 
 
 def connexion(request):
@@ -48,3 +51,47 @@ def tableau_de_bord(request):
         return render(request, 'core/dashboard_sous_superuser.html')
     else:
         return render(request, 'core/dashboard_utilisateur.html')
+    
+# ─── Gestion des CRMA (super-utilisateur national uniquement) ─────────────────
+
+@role_required('superuser')
+def crma_liste(request):
+    crmas = CRMA.objects.all().order_by('code')
+    return render(request, 'core/crma_liste.html', {'crmas': crmas})
+
+
+@role_required('superuser')
+def crma_creer(request):
+    if request.method == 'POST':
+        form = CRMAForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "CRMA créée avec succès.")
+            return redirect('crma_liste')
+    else:
+        form = CRMAForm()
+    return render(request, 'core/crma_form.html', {'form': form, 'titre': 'Créer une CRMA'})
+
+
+@role_required('superuser')
+def crma_modifier(request, pk):
+    crma = get_object_or_404(CRMA, pk=pk)
+    if request.method == 'POST':
+        form = CRMAForm(request.POST, instance=crma)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "CRMA modifiée avec succès.")
+            return redirect('crma_liste')
+    else:
+        form = CRMAForm(instance=crma)
+    return render(request, 'core/crma_form.html', {'form': form, 'titre': f'Modifier {crma.nom}'})
+
+
+@role_required('superuser')
+def crma_supprimer(request, pk):
+    crma = get_object_or_404(CRMA, pk=pk)
+    if request.method == 'POST':
+        crma.delete()
+        messages.success(request, "CRMA supprimée.")
+        return redirect('crma_liste')
+    return render(request, 'core/crma_confirmer_suppression.html', {'objet': crma})
