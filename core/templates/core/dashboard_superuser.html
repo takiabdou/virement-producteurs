@@ -1,0 +1,8 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Tableau de bord — Super-utilisateur</title></head>
+<body>
+    <h1>Bienvenue, {{ request.user.get_full_name }} — Super-utilisateur national</h1>
+    <p><a href="{% url 'deconnexion' %}">Se déconnecter</a></p>
+</body>
+</html>

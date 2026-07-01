@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head><meta charset="UTF-8"><title>Tableau de bord — Utilisateur BL</title></head>
+<body>
+    <h1>Bienvenue, {{ request.user.get_full_name }}
+        — BL {{ request.user.profil.bureau_local.nom }}</h1>
+    <p><a href="{% url 'deconnexion' %}">Se déconnecter</a></p>
+</body>
+</html>
