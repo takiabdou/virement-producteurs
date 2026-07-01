@@ -50,13 +50,13 @@
 <nav>
     <span><strong>Virement Producteurs</strong></span>
     <div>
-        {% if user.is_authenticated %}
-            <span>{{ user.get_full_name|default:user.username }}</span>
-            {% if user.profil.role == 'superuser' %}
-                <a href="{% url 'crma_liste' %}">CRMA</a>
-            {% endif %}
-            <a href="{% url 'deconnexion' %}">Déconnexion</a>
+        <span>{{ user.get_full_name|default:user.username }}</span>
+        {% if user.profil.role == 'superuser' %}
+            <a href="{% url 'crma_liste' %}">CRMA</a>
+        {% elif user.profil.role == 'sous_superuser' %}
+            <a href="{% url 'bl_liste' %}">Bureaux Locaux</a>
         {% endif %}
+        <a href="{% url 'deconnexion' %}">Déconnexion</a>
     </div>
 </nav>
 <div class="container">

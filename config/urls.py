@@ -12,4 +12,9 @@ urlpatterns = [
     path('crmas/creer/', views.crma_creer, name='crma_creer'),
     path('crmas/<int:pk>/modifier/', views.crma_modifier, name='crma_modifier'),
     path('crmas/<int:pk>/supprimer/', views.crma_supprimer, name='crma_supprimer'),
+    # Gestion des Bureaux Locaux
+    path('bureaux/', views.bl_liste, name='bl_liste'),
+    path('bureaux/creer/', views.bl_creer, name='bl_creer'),
+    path('bureaux/<int:pk>/modifier/', views.bl_modifier, name='bl_modifier'),
+    path('bureaux/<int:pk>/supprimer/', views.bl_supprimer, name='bl_supprimer'),
 ]

@@ -1,0 +1,31 @@
+{% extends 'core/base.html' %}
+{% block titre %}Bureaux Locaux — {{ crma.nom }}{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Bureaux Locaux — {{ crma.nom }}</h1>
+    <a href="{% url 'bl_creer' %}" class="btn btn-vert">+ Nouveau Bureau Local</a>
+    <br><br>
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th><th>Nom</th><th>Adresse</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bl in bureaux %}
+            <tr>
+                <td>{{ bl.code }}</td>
+                <td>{{ bl.nom }}</td>
+                <td>{{ bl.adresse }}</td>
+                <td>
+                    <a href="{% url 'bl_modifier' bl.pk %}" class="btn btn-bleu">Modifier</a>
+                    <a href="{% url 'bl_supprimer' bl.pk %}" class="btn btn-rouge">Supprimer</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">Aucun Bureau Local enregistré.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,9 +1,11 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><title>Tableau de bord — Sous-super-utilisateur</title></head>
-<body>
-    <h1>Bienvenue, {{ request.user.get_full_name }}
-        — CRMA {{ request.user.profil.crma.nom }}</h1>
-    <p><a href="{% url 'deconnexion' %}">Se déconnecter</a></p>
-</body>
-</html>
+{% extends 'core/base.html' %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Bienvenue, {{ user.get_full_name|default:user.username }}</h1>
+    <p style="color:#555; margin-bottom:1.5rem;">
+        Sous-super-utilisateur — {{ user.profil.crma.nom }}
+    </p>
+    <a href="{% url 'bl_liste' %}" class="btn btn-bleu">Gérer les Bureaux Locaux</a>
+</div>
+{% endblock %}

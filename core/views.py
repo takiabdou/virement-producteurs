@@ -95,3 +95,59 @@ def crma_supprimer(request, pk):
         messages.success(request, "CRMA supprimée.")
         return redirect('crma_liste')
     return render(request, 'core/crma_confirmer_suppression.html', {'objet': crma})
+
+# ─── Gestion des Bureaux Locaux (sous-super-utilisateur CRMA) ─────────────────
+
+@role_required('sous_superuser')
+def bl_liste(request):
+    crma = request.user.profil.crma
+    bureaux = BureauLocal.objects.filter(crma=crma).order_by('code')
+    return render(request, 'core/bl_liste.html', {'bureaux': bureaux, 'crma': crma})
+
+
+@role_required('sous_superuser')
+def bl_creer(request):
+    crma = request.user.profil.crma
+    if request.method == 'POST':
+        form = BureauLocalForm(request.POST)
+        if form.is_valid():
+            bl = form.save(commit=False)
+            bl.crma = crma
+            bl.save()
+            messages.success(request, "Bureau Local créé avec succès.")
+            return redirect('bl_liste')
+    else:
+        form = BureauLocalForm()
+    return render(request, 'core/bl_form.html', {
+        'form': form, 'titre': 'Créer un Bureau Local', 'crma': crma
+    })
+
+
+@role_required('sous_superuser')
+def bl_modifier(request, pk):
+    crma = request.user.profil.crma
+    bl = get_object_or_404(BureauLocal, pk=pk, crma=crma)
+    if request.method == 'POST':
+        form = BureauLocalForm(request.POST, instance=bl)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Bureau Local modifié avec succès.")
+            return redirect('bl_liste')
+    else:
+        form = BureauLocalForm(instance=bl)
+    return render(request, 'core/bl_form.html', {
+        'form': form, 'titre': f'Modifier {bl.nom}', 'crma': crma
+    })
+
+
+@role_required('sous_superuser')
+def bl_supprimer(request, pk):
+    crma = request.user.profil.crma
+    bl = get_object_or_404(BureauLocal, pk=pk, crma=crma)
+    if request.method == 'POST':
+        bl.delete()
+        messages.success(request, "Bureau Local supprimé.")
+        return redirect('bl_liste')
+    return render(request, 'core/bl_confirmer_suppression.html', {
+        'objet': bl, 'crma': crma
+    })
