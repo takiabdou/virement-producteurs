@@ -17,4 +17,9 @@ urlpatterns = [
     path('bureaux/creer/', views.bl_creer, name='bl_creer'),
     path('bureaux/<int:pk>/modifier/', views.bl_modifier, name='bl_modifier'),
     path('bureaux/<int:pk>/supprimer/', views.bl_supprimer, name='bl_supprimer'),
+    # Gestion des Utilisateurs BL
+    path('utilisateurs/', views.utilisateur_liste, name='utilisateur_liste'),
+    path('utilisateurs/creer/', views.utilisateur_creer, name='utilisateur_creer'),
+    path('utilisateurs/<int:pk>/modifier/', views.utilisateur_modifier, name='utilisateur_modifier'),
+    path('utilisateurs/<int:pk>/supprimer/', views.utilisateur_supprimer, name='utilisateur_supprimer'),
 ]

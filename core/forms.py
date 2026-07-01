@@ -84,3 +84,37 @@ class ProfilForm(forms.ModelForm):
             'poste': 'Poste occupé',
             'telephone': 'Téléphone portable',
         }
+
+class UserModificationForm(forms.ModelForm):
+    """Formulaire de modification d'un utilisateur — mot de passe optionnel."""
+    password1 = forms.CharField(
+        label='Nouveau mot de passe (laisser vide pour ne pas changer)',
+        widget=forms.PasswordInput,
+        required=False
+    )
+    password2 = forms.CharField(
+        label='Confirmer le nouveau mot de passe',
+        widget=forms.PasswordInput,
+        required=False
+    )
+
+    class Meta:
+        model = User
+        fields = ['username', 'first_name', 'last_name', 'email']
+        labels = {
+            'username': 'Identifiant',
+            'first_name': 'Prénom',
+            'last_name': 'Nom',
+            'email': 'Email',
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 or p2:
+            if p1 != p2:
+                raise forms.ValidationError(
+                    "Les mots de passe ne correspondent pas."
+                )
+        return cleaned_data

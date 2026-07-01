@@ -1,0 +1,33 @@
+{% extends 'core/base.html' %}
+{% block titre %}Utilisateurs — {{ crma.nom }}{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Utilisateurs — {{ crma.nom }}</h1>
+    <a href="{% url 'utilisateur_creer' %}" class="btn btn-vert">+ Nouvel utilisateur</a>
+    <br><br>
+    <table>
+        <thead>
+            <tr>
+                <th>Identifiant</th><th>Nom complet</th>
+                <th>Bureau Local</th><th>Poste</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for profil in profils %}
+            <tr>
+                <td>{{ profil.user.username }}</td>
+                <td>{{ profil.user.get_full_name }}</td>
+                <td>{{ profil.bureau_local }}</td>
+                <td>{{ profil.poste }}</td>
+                <td>
+                    <a href="{% url 'utilisateur_modifier' profil.pk %}" class="btn btn-bleu">Modifier</a>
+                    <a href="{% url 'utilisateur_supprimer' profil.pk %}" class="btn btn-rouge">Supprimer</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5">Aucun utilisateur enregistré.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

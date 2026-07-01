@@ -3,9 +3,10 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from .models import CRMA, BureauLocal, Profil
-from .forms import CRMAForm, BureauLocalForm, UserCreationFormCustom, ProfilForm
+from .forms import CRMAForm, BureauLocalForm, UserCreationFormCustom, UserModificationForm, ProfilForm
 from .decorators import role_required
-
+from django.contrib.auth.models import User
+from django import forms
 
 def connexion(request):
     """Page de connexion commune à tous les rôles."""
@@ -150,4 +151,108 @@ def bl_supprimer(request, pk):
         return redirect('bl_liste')
     return render(request, 'core/bl_confirmer_suppression.html', {
         'objet': bl, 'crma': crma
+    })
+
+# ─── Gestion des Utilisateurs BL (sous-super-utilisateur CRMA) ───────────────
+
+@role_required('sous_superuser')
+def utilisateur_liste(request):
+    crma = request.user.profil.crma
+    profils = Profil.objects.filter(
+        role='utilisateur',
+        bureau_local__crma=crma
+    ).select_related('user', 'bureau_local')
+    return render(request, 'core/utilisateur_liste.html', {
+        'profils': profils, 'crma': crma
+    })
+
+
+@role_required('sous_superuser')
+def utilisateur_creer(request):
+    crma = request.user.profil.crma
+    if request.method == 'POST':
+        user_form = UserCreationFormCustom(request.POST)
+        profil_form = ProfilForm(request.POST)
+        profil_form.fields['role'].required = False
+        if user_form.is_valid() and profil_form.is_valid():
+            # Vérifier que le BL choisi appartient bien à la CRMA
+            bl = profil_form.cleaned_data['bureau_local']
+            if bl and bl.crma != crma:
+                messages.error(request, "Bureau Local invalide.")
+                return redirect('utilisateur_liste')
+            # Créer le User
+            user = user_form.save(commit=False)
+            user.set_password(user_form.cleaned_data['password1'])
+            user.save()
+            # Créer le Profil lié
+            profil = profil_form.save(commit=False)
+            profil.user = user
+            profil.role = 'utilisateur'
+            profil.save()
+            messages.success(request, f"Utilisateur {user.username} créé avec succès.")
+            return redirect('utilisateur_liste')
+    else:
+        user_form = UserCreationFormCustom()
+        profil_form = ProfilForm()
+
+    # Limiter les BL proposés à ceux de la CRMA de l'utilisateur connecté
+    profil_form.fields['bureau_local'].queryset = BureauLocal.objects.filter(crma=crma)
+    profil_form.fields['role'].widget = forms.HiddenInput()
+    profil_form.fields['role'].required = False  # ← ajoutez cette ligne
+
+    return render(request, 'core/utilisateur_form.html', {
+        'user_form': user_form,
+        'profil_form': profil_form,
+        'titre': 'Créer un utilisateur',
+        'crma': crma
+    })
+
+
+@role_required('sous_superuser')
+def utilisateur_modifier(request, pk):
+    crma = request.user.profil.crma
+    profil = get_object_or_404(
+        Profil, pk=pk, role='utilisateur', bureau_local__crma=crma
+    )
+    if request.method == 'POST':
+        user_form = UserModificationForm(request.POST, instance=profil.user)
+        profil_form = ProfilForm(request.POST, instance=profil)
+        profil_form.fields['role'].required = False
+        if user_form.is_valid() and profil_form.is_valid():
+            user = user_form.save(commit=False)
+            nouveau_mdp = user_form.cleaned_data.get('password1')
+            if nouveau_mdp:
+                user.set_password(nouveau_mdp)
+            user.save()
+            profil_form.save()
+            messages.success(request, "Utilisateur modifié avec succès.")
+            return redirect('utilisateur_liste')
+    else:
+        user_form = UserModificationForm(instance=profil.user)
+        profil_form = ProfilForm(instance=profil)
+
+    profil_form.fields['bureau_local'].queryset = BureauLocal.objects.filter(crma=crma)
+    profil_form.fields['role'].widget = forms.HiddenInput()
+    profil_form.fields['role'].required = False
+
+    return render(request, 'core/utilisateur_form.html', {
+        'user_form': user_form,
+        'profil_form': profil_form,
+        'titre': f'Modifier {profil.user.get_full_name()}',
+        'crma': crma
+    })
+
+
+@role_required('sous_superuser')
+def utilisateur_supprimer(request, pk):
+    crma = request.user.profil.crma
+    profil = get_object_or_404(
+        Profil, pk=pk, role='utilisateur', bureau_local__crma=crma
+    )
+    if request.method == 'POST':
+        profil.user.delete()
+        messages.success(request, "Utilisateur supprimé.")
+        return redirect('utilisateur_liste')
+    return render(request, 'core/utilisateur_confirmer_suppression.html', {
+        'objet': profil, 'crma': crma
     })

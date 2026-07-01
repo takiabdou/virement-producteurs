@@ -1,0 +1,17 @@
+{% extends 'core/base.html' %}
+{% block titre %}Confirmer la suppression{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Confirmer la suppression</h1>
+    <p>Êtes-vous sûr de vouloir supprimer l'utilisateur
+        <strong>{{ objet.user.get_full_name }}</strong>
+        ({{ objet.user.username }}) ?</p>
+    <form method="post" style="margin-top:1rem;">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-rouge">Oui, supprimer</button>
+            <a href="{% url 'utilisateur_liste' %}" class="btn btn-gris">Annuler</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
