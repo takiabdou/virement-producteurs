@@ -78,3 +78,26 @@ class Profil(models.Model):
 
     def __str__(self):
         return f"{self.user.get_full_name()} [{self.get_role_display()}]"
+
+class LigneEncaissement(models.Model):
+    bureau_local = models.ForeignKey(
+        BureauLocal,
+        on_delete=models.CASCADE,
+        related_name='encaissements'
+    )
+    saisi_par = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='encaissements'
+    )
+    montant = models.DecimalField(max_digits=12, decimal_places=2)
+    numero_contrat = models.CharField(max_length=50, blank=True)
+    date = models.DateField(auto_now_add=True)
+    heure = models.TimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-date', '-heure']
+
+    def __str__(self):
+        return f"{self.date} | {self.bureau_local.code} | {self.montant} DA"

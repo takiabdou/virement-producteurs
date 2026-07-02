@@ -1,9 +1,13 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head><meta charset="UTF-8"><title>Tableau de bord — Utilisateur BL</title></head>
-<body>
-    <h1>Bienvenue, {{ request.user.get_full_name }}
-        — BL {{ request.user.profil.bureau_local.nom }}</h1>
-    <p><a href="{% url 'deconnexion' %}">Se déconnecter</a></p>
-</body>
-</html>
+{% extends 'core/base.html' %}
+{% block titre %}Tableau de bord{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Bienvenue, {{ user.get_full_name|default:user.username }}</h1>
+    <p style="color:#555; margin-bottom:1.5rem;">
+        Bureau Local : {{ user.profil.bureau_local.nom }}
+    </p>
+    <a href="{% url 'brouillard' %}" class="btn btn-bleu">
+        Ouvrir le brouillard de caisse
+    </a>
+</div>
+{% endblock %}

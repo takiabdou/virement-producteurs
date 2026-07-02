@@ -1,0 +1,84 @@
+{% extends 'core/base.html' %}
+{% block titre %}Brouillard de caisse — {{ bl.nom }}{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Brouillard de caisse</h1>
+    <p style="color:#555; margin-bottom:1.5rem;">
+        {{ bl.nom }} — {{ aujourd_hui|date:"d/m/Y" }}
+    </p>
+
+    <!-- Formulaire de saisie -->
+    <form method="post" action="{% url 'encaissement_ajouter' %}"
+          style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:2rem;">
+        {% csrf_token %}
+        <div class="form-group" style="flex:1; min-width:180px; margin:0;">
+            <label>N° Contrat (optionnel)</label>
+            <input type="text" name="numero_contrat" placeholder="ex: 2026/12345">
+        </div>
+        <div class="form-group" style="flex:1; min-width:180px; margin:0;">
+            <label>Montant encaissé (DA) *</label>
+            <input type="text" name="montant" placeholder="ex: 15000" required>
+        </div>
+        <div style="padding-bottom:0.1rem;">
+            <button type="submit" class="btn btn-vert">+ Ajouter</button>
+        </div>
+    </form>
+
+    <!-- Tableau des encaissements du jour -->
+    <table>
+        <thead>
+            <tr>
+                <th>Heure</th>
+                <th>N° Contrat</th>
+                <th>Montant (DA)</th>
+                <th>Saisi par</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>{{ ligne.heure|time:"H:i" }}</td>
+                <td>{{ ligne.numero_contrat|default:"—" }}</td>
+                <td style="text-align:right; font-weight:bold;">
+                    {{ ligne.montant|floatformat:2 }}
+                </td>
+                <td>{{ ligne.saisi_par.get_full_name|default:ligne.saisi_par.username }}</td>
+                <td>
+                    <form method="post"
+                          action="{% url 'encaissement_supprimer' ligne.pk %}"
+                          style="display:inline;"
+                          onsubmit="return confirm('Supprimer cette ligne ?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-rouge"
+                                style="padding:0.3rem 0.7rem; font-size:0.8rem;">
+                            Supprimer
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align:center; color:#888; padding:2rem;">
+                    Aucun encaissement saisi aujourd'hui.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if lignes %}
+        <tfoot>
+            <tr style="background:#eaf0fb;">
+                <td colspan="2" style="font-weight:bold; padding:0.7rem 1rem;">
+                    TOTAL DU JOUR
+                </td>
+                <td style="font-weight:bold; text-align:right; font-size:1.1rem;
+                            color:#1a5276; padding:0.7rem 1rem;">
+                    {{ total_jour|floatformat:2 }} DA
+                </td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>   
+</div>
+{% endblock %}

@@ -22,4 +22,8 @@ urlpatterns = [
     path('utilisateurs/creer/', views.utilisateur_creer, name='utilisateur_creer'),
     path('utilisateurs/<int:pk>/modifier/', views.utilisateur_modifier, name='utilisateur_modifier'),
     path('utilisateurs/<int:pk>/supprimer/', views.utilisateur_supprimer, name='utilisateur_supprimer'),
+    # Brouillard de caisse
+    path('brouillard/', views.brouillard, name='brouillard'),
+    path('brouillard/ajouter/', views.encaissement_ajouter, name='encaissement_ajouter'),
+    path('brouillard/<int:pk>/supprimer/', views.encaissement_supprimer, name='encaissement_supprimer'),
 ]

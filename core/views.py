@@ -2,11 +2,14 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import CRMA, BureauLocal, Profil
 from .forms import CRMAForm, BureauLocalForm, UserCreationFormCustom, UserModificationForm, ProfilForm
 from .decorators import role_required
 from django.contrib.auth.models import User
 from django import forms
+from django.utils import timezone
+from .models import CRMA, BureauLocal, Profil, LigneEncaissement
+from decimal import Decimal
+import datetime
 
 def connexion(request):
     """Page de connexion commune à tous les rôles."""
@@ -256,3 +259,63 @@ def utilisateur_supprimer(request, pk):
     return render(request, 'core/utilisateur_confirmer_suppression.html', {
         'objet': profil, 'crma': crma
     })
+
+@role_required('utilisateur')
+def brouillard(request):
+    """Page principale du brouillard de caisse pour l'utilisateur BL."""
+    bl = request.user.profil.bureau_local
+    aujourd_hui = datetime.date.today()
+
+    lignes = LigneEncaissement.objects.filter(
+        bureau_local=bl,
+        date=aujourd_hui
+    )
+    total_jour = sum(l.montant for l in lignes) if lignes else Decimal('0')
+
+    return render(request, 'core/brouillard.html', {
+        'bl': bl,
+        'lignes': lignes,
+        'total_jour': total_jour,
+        'aujourd_hui': aujourd_hui,
+    })
+
+
+@role_required('utilisateur')
+def encaissement_ajouter(request):
+    """Saisie d'un nouvel encaissement."""
+    bl = request.user.profil.bureau_local
+    if request.method == 'POST':
+        montant_str = request.POST.get('montant', '').replace(',', '.')
+        numero_contrat = request.POST.get('numero_contrat', '').strip()
+        try:
+            montant = Decimal(montant_str)
+            if montant <= 0:
+                raise ValueError
+        except Exception:
+            messages.error(request, "Montant invalide. Saisissez un nombre positif.")
+            return redirect('brouillard')
+
+        LigneEncaissement.objects.create(
+            bureau_local=bl,
+            saisi_par=request.user,
+            montant=montant,
+            numero_contrat=numero_contrat
+        )
+        messages.success(request, f"Encaissement de {montant:,.2f} DA enregistré.")
+        return redirect('brouillard')
+
+    return redirect('brouillard')
+
+
+@role_required('utilisateur')
+def encaissement_supprimer(request, pk):
+    """Suppression d'une ligne d'encaissement de la journée en cours."""
+    bl = request.user.profil.bureau_local
+    aujourd_hui = timezone.localdate()
+    ligne = get_object_or_404(
+        LigneEncaissement, pk=pk, bureau_local=bl, date=aujourd_hui
+    )
+    if request.method == 'POST':
+        ligne.delete()
+        messages.success(request, "Ligne supprimée.")
+    return redirect('brouillard')

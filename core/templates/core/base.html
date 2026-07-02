@@ -56,6 +56,8 @@
         {% elif user.profil.role == 'sous_superuser' %}
             <a href="{% url 'bl_liste' %}">Bureaux Locaux</a>
             <a href="{% url 'utilisateur_liste' %}">Utilisateurs</a>
+        {% elif user.profil.role == 'utilisateur' %}
+            <a href="{% url 'brouillard' %}">Brouillard</a>
         {% endif %}
         <a href="{% url 'deconnexion' %}">Déconnexion</a>
     </div>

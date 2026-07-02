@@ -1,6 +1,5 @@
 from django.contrib import admin
-from .models import CRMA, BureauLocal, Profil
-
+from .models import CRMA, BureauLocal, Profil, LigneEncaissement
 
 @admin.register(CRMA)
 class CRMAAdmin(admin.ModelAdmin):
@@ -18,3 +17,8 @@ class ProfilAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'crma', 'bureau_local', 'poste')
     list_filter = ('role', 'crma')
     search_fields = ('user__username', 'user__first_name', 'user__last_name')
+
+@admin.register(LigneEncaissement)
+class LigneEncaissementAdmin(admin.ModelAdmin):
+    list_display = ('date', 'bureau_local', 'numero_contrat', 'montant', 'saisi_par')
+    list_filter = ('date', 'bureau_local')
