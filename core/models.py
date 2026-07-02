@@ -101,3 +101,35 @@ class LigneEncaissement(models.Model):
 
     def __str__(self):
         return f"{self.date} | {self.bureau_local.code} | {self.montant} DA"
+    
+class BonVersement(models.Model):
+    TYPE_CHOICES = [
+        ('CCP', 'Versement CCP'),
+        ('BADR', 'Virement BADR'),
+        ('BNA', 'Virement BNA'),
+    ]
+
+    bureau_local = models.ForeignKey(
+        BureauLocal,
+        on_delete=models.CASCADE,
+        related_name='bons_versement'
+    )
+    emis_par = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='bons_versement'
+    )
+    type_versement = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    numero_emission = models.CharField(max_length=50, unique=True)
+    montant_jour = models.DecimalField(max_digits=12, decimal_places=2)
+    droits_poste = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    montant_a_verser = models.DecimalField(max_digits=12, decimal_places=2)
+    date_emission = models.DateField(auto_now_add=True)
+    date_versement = models.DateField()
+
+    class Meta:
+        ordering = ['-date_emission', '-id']
+
+    def __str__(self):
+        return f"{self.numero_emission} — {self.montant_a_verser} DA"
