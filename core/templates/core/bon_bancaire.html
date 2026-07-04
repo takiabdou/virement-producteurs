@@ -1,0 +1,160 @@
+{% extends 'core/base.html' %}
+{% block titre %}Ordre de versement {{ type_versement }} — {{ bon.numero_emission }}{% endblock %}
+{% block contenu %}
+
+<div class="no-print" style="margin-bottom:1rem; display:flex; gap:1rem;">
+    <button onclick="window.print()" class="btn btn-bleu">🖨️ Imprimer</button>
+    <a href="{% url 'brouillard' %}" class="btn btn-gris">← Retour au brouillard</a>
+</div>
+
+<div class="odv" id="document-impression">
+
+<div class="odv-entete">
+    <div class="odv-crma">{{ crma.nom|upper }}</div>
+    <div class="odv-ref">N° Réf. : {{ bon.numero_emission }}</div>
+</div>
+
+<h2 class="odv-titre">ORDRE DE VERSEMENT SIÈGE</h2>
+
+<div class="odv-corps">
+    <div class="odv-ligne">
+        <span class="odv-label">Monsieur / Madame :</span>
+        <span class="odv-valeur">
+            {{ user.last_name|upper }} {{ user.first_name }}
+        </span>
+    </div>
+
+    <div class="odv-ligne">
+        <span class="odv-label">Bureau Local :</span>
+        <span class="odv-valeur">{{ bl.nom }}</span>
+    </div>
+
+    <div class="odv-ligne">
+        <span class="odv-label">Montant en chiffres :</span>
+        <span class="odv-valeur grand">
+            {{ bon.montant_a_verser|floatformat:2 }} DA
+        </span>
+    </div>
+
+    <div class="odv-ligne">
+        <span class="odv-label">Montant en lettres :</span>
+        <span class="odv-valeur">{{ montant_lettres }}</span>
+    </div>
+
+    <div class="odv-ligne">
+        <span class="odv-label">Au profit du compte :</span>
+        <span class="odv-valeur">
+            {{ crma.nom|upper }}
+            {% if type_versement == 'BADR' %}
+                N° {{ crma.badr_compte }}
+            {% else %}
+                N° {{ crma.bna_compte }}
+            {% endif %}
+        </span>
+    </div>
+
+    <div class="odv-ligne">
+        <span class="odv-label">Motif :</span>
+        <span class="odv-valeur">
+            Versement {{ type_versement }} — {{ bl.nom }} — {{ aujourd_hui|date:"d/m/Y" }}
+        </span>
+    </div>
+</div>
+
+<div class="odv-pied">
+    <div class="odv-lieu-date">
+        Fait à {{ bl.adresse }}, le {{ aujourd_hui|date:"d/m/Y" }}
+    </div>
+    <div class="odv-signatures">
+        <div class="odv-sig-bloc">
+            <div class="odv-sig-titre">L'émetteur</div>
+            <div class="odv-sig-zone"></div>
+            <div class="odv-sig-nom">
+                {{ user.last_name|upper }} {{ user.first_name }}
+            </div>
+        </div>
+        <div class="odv-sig-bloc">
+            <div class="odv-sig-titre">VISA CRMA</div>
+            <div class="odv-sig-zone"></div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<style>
+.odv {
+    border: 2px solid #1a5276;
+    border-radius: 4px;
+    padding: 2rem;
+    font-family: Arial, sans-serif;
+    max-width: 750px;
+    margin: 0 auto;
+    background: white;
+}
+.odv-entete {
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 2px solid #1a5276;
+    padding-bottom: 0.8rem;
+    margin-bottom: 1rem;
+}
+.odv-crma {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #1a5276;
+}
+.odv-ref { font-size: 0.9rem; color: #555; }
+.odv-titre {
+    text-align: center;
+    font-size: 1.3rem;
+    color: #1a5276;
+    margin-bottom: 1.5rem;
+    text-decoration: underline;
+}
+.odv-corps { margin-bottom: 2rem; }
+.odv-ligne {
+    display: flex;
+    gap: 1rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #eee;
+    align-items: baseline;
+}
+.odv-label {
+    min-width: 200px;
+    color: #555;
+    font-size: 0.9rem;
+}
+.odv-valeur { font-weight: bold; flex: 1; }
+.odv-valeur.grand { font-size: 1.2rem; color: #1a5276; }
+.odv-pied { margin-top: 2rem; }
+.odv-lieu-date {
+    margin-bottom: 2rem;
+    font-style: italic;
+    color: #555;
+}
+.odv-signatures {
+    display: flex;
+    justify-content: space-around;
+}
+.odv-sig-bloc { text-align: center; }
+.odv-sig-titre {
+    font-weight: bold;
+    color: #1a5276;
+    margin-bottom: 0.5rem;
+}
+.odv-sig-zone {
+    width: 180px;
+    height: 70px;
+    border: 1px solid #ccc;
+    margin: 0 auto 0.5rem;
+}
+.odv-sig-nom { font-size: 0.85rem; }
+
+@media print {
+    .no-print { display: none !important; }
+    nav { display: none !important; }
+    .container { margin: 0; padding: 0; }
+}
+</style>
+{% endblock %}

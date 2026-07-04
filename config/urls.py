@@ -26,4 +26,7 @@ urlpatterns = [
     path('brouillard/', views.brouillard, name='brouillard'),
     path('brouillard/ajouter/', views.encaissement_ajouter, name='encaissement_ajouter'),
     path('brouillard/<int:pk>/supprimer/', views.encaissement_supprimer, name='encaissement_supprimer'),
+    # Versement
+    path('versement/', views.choisir_versement, name='choisir_versement'),
+    path('versement/apercu/', views.apercu_versement, name='apercu_versement'),
 ]

@@ -79,6 +79,13 @@
             </tr>
         </tfoot>
         {% endif %}
-    </table>   
+    </table>
+    {% if lignes %}
+    <div style="margin-top:1.5rem;">
+        <a href="{% url 'choisir_versement' %}" class="btn btn-bleu">
+            Éditer un bon de versement →
+        </a>
+    </div>
+    {% endif %}   
 </div>
 {% endblock %}
