@@ -263,21 +263,40 @@ def utilisateur_supprimer(request, pk):
 
 @role_required('utilisateur')
 def brouillard(request):
-    """Page principale du brouillard de caisse pour l'utilisateur BL."""
     bl = request.user.profil.bureau_local
     aujourd_hui = datetime.date.today()
 
+    # Permet de consulter un jour précédent via ?date=YYYY-MM-DD
+    date_str = request.GET.get('date')
+    if date_str:
+        try:
+            date_selectionnee = datetime.date.fromisoformat(date_str)
+        except ValueError:
+            date_selectionnee = aujourd_hui
+    else:
+        date_selectionnee = aujourd_hui
+
+    est_aujourd_hui = (date_selectionnee == aujourd_hui)
+
     lignes = LigneEncaissement.objects.filter(
         bureau_local=bl,
-        date=aujourd_hui
+        date=date_selectionnee
     )
     total_jour = sum(l.montant for l in lignes) if lignes else Decimal('0')
+
+    # Liste des jours ayant des encaissements (pour le sélecteur)
+    jours_disponibles = LigneEncaissement.objects.filter(
+        bureau_local=bl
+    ).values_list('date', flat=True).distinct().order_by('-date')
 
     return render(request, 'core/brouillard.html', {
         'bl': bl,
         'lignes': lignes,
         'total_jour': total_jour,
         'aujourd_hui': aujourd_hui,
+        'date_selectionnee': date_selectionnee,
+        'est_aujourd_hui': est_aujourd_hui,
+        'jours_disponibles': jours_disponibles,
     })
 
 
@@ -412,6 +431,98 @@ def apercu_versement(request):
     }
 
     if type_versement == 'CCP':
+        return render(request, 'core/bon_ccp.html', context)
+    else:
+        return render(request, 'core/bon_bancaire.html', context)
+
+ # ─── Historique des bons de versement ────────────────────────────────────────
+
+@login_required
+def historique_bons(request):
+    """
+    Historique des bons selon le rôle de l'utilisateur connecté.
+    """
+    try:
+        role = request.user.profil.role
+    except Exception:
+        return redirect('connexion')
+
+    if role == 'utilisateur':
+        bons = BonVersement.objects.filter(
+            bureau_local=request.user.profil.bureau_local
+        )
+    elif role == 'sous_superuser':
+        bons = BonVersement.objects.filter(
+            bureau_local__crma=request.user.profil.crma
+        )
+    else:  # superuser
+        bons = BonVersement.objects.all()
+
+    # Filtres optionnels par date
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+    type_filtre = request.GET.get('type_versement')
+
+    if date_debut:
+        bons = bons.filter(date_emission__gte=date_debut)
+    if date_fin:
+        bons = bons.filter(date_emission__lte=date_fin)
+    if type_filtre and type_filtre in ('CCP', 'BADR', 'BNA'):
+        bons = bons.filter(type_versement=type_filtre)
+
+    bons = bons.select_related(
+        'bureau_local', 'bureau_local__crma', 'emis_par'
+    ).order_by('-date_emission', '-id')
+
+    total_periode = sum(b.montant_a_verser for b in bons)
+
+    return render(request, 'core/historique_bons.html', {
+        'bons': bons,
+        'total_periode': total_periode,
+        'date_debut': date_debut or '',
+        'date_fin': date_fin or '',
+        'type_filtre': type_filtre or '',
+    })
+
+
+@login_required
+def reimprimer_bon(request, pk):
+    """Réimprime un bon existant sans en créer un nouveau."""
+    try:
+        role = request.user.profil.role
+    except Exception:
+        return redirect('connexion')
+
+    # Filtrer selon le rôle
+    if role == 'utilisateur':
+        bon = get_object_or_404(
+            BonVersement, pk=pk,
+            bureau_local=request.user.profil.bureau_local
+        )
+    elif role == 'sous_superuser':
+        bon = get_object_or_404(
+            BonVersement, pk=pk,
+            bureau_local__crma=request.user.profil.crma
+        )
+    else:
+        bon = get_object_or_404(BonVersement, pk=pk)
+
+    bl = bon.bureau_local
+    crma = bl.crma
+    montant_lettres = montant_en_lettres(bon.montant_a_verser)
+
+    context = {
+        'bon': bon,
+        'bl': bl,
+        'crma': crma,
+        'user': bon.emis_par,
+        'montant_lettres': montant_lettres,
+        'aujourd_hui': bon.date_versement,
+        'type_versement': bon.type_versement,
+        'reimprimer': True,
+    }
+
+    if bon.type_versement == 'CCP':
         return render(request, 'core/bon_ccp.html', context)
     else:
         return render(request, 'core/bon_bancaire.html', context)

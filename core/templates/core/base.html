@@ -2,75 +2,367 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#1a5276">
     <title>{% block titre %}Virement Producteurs{% endblock %}</title>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: Arial, sans-serif; background: #f0f2f5; }
+        /* ── Reset & base ── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { font-size: 16px; }
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            color: #222;
+            min-height: 100vh;
+        }
+
+        /* ── Navigation ── */
         nav {
-            background: #1a5276; color: white; padding: 0.8rem 1.5rem;
-            display: flex; justify-content: space-between; align-items: center;
+            background: #1a5276;
+            color: white;
+            padding: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
-        nav a { color: white; text-decoration: none; margin-left: 1rem; }
-        nav a:hover { text-decoration: underline; }
-        .container { max-width: 1100px; margin: 2rem auto; padding: 0 1rem; }
+        .nav-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .nav-brand {
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .nav-brand span { font-size: 1.3rem; }
+
+        /* Menu desktop */
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+        .nav-links a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-size: 0.88rem;
+            transition: background 0.15s;
+            white-space: nowrap;
+        }
+        .nav-links a:hover { background: rgba(255,255,255,0.15); color: white; }
+        .nav-links a.active { background: rgba(255,255,255,0.2); color: white; }
+        .nav-user {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+            border-right: 1px solid rgba(255,255,255,0.2);
+            margin-right: 0.3rem;
+        }
+        .nav-links a.deconnexion {
+            color: #f1948a;
+            border: 1px solid rgba(241,148,138,0.4);
+        }
+        .nav-links a.deconnexion:hover { background: rgba(192,57,43,0.3); }
+
+        /* Bouton hamburger (mobile) */
+        .hamburger {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.4rem;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .hamburger span {
+            display: block;
+            width: 24px;
+            height: 2px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.2s;
+        }
+
+        /* Menu mobile (caché par défaut) */
+        .nav-mobile {
+            display: none;
+            flex-direction: column;
+            background: #154360;
+            padding: 0.5rem 0;
+        }
+        .nav-mobile a {
+            color: rgba(255,255,255,0.85);
+            text-decoration: none;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: block;
+        }
+        .nav-mobile a:hover { background: rgba(255,255,255,0.1); }
+        .nav-mobile .nav-user-mobile {
+            padding: 0.75rem 1.5rem;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* ── Conteneur principal ── */
+        .container {
+            max-width: 1200px;
+            margin: 1.5rem auto;
+            padding: 0 1rem;
+        }
+
+        /* ── Cards ── */
         .card {
-            background: white; border-radius: 8px; padding: 1.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 1.5rem;
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+            margin-bottom: 1.5rem;
         }
-        h1 { color: #1a5276; margin-bottom: 1.2rem; font-size: 1.5rem; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 0.7rem 1rem; text-align: left; border-bottom: 1px solid #eee; }
-        th { background: #eaf0fb; color: #1a5276; font-weight: bold; }
-        tr:hover { background: #f9f9f9; }
+
+        /* ── Titres ── */
+        h1 { color: #1a5276; margin-bottom: 1.2rem; font-size: 1.4rem; }
+        h2 { color: #1a5276; margin-bottom: 1rem; font-size: 1.2rem; }
+        h3 { color: #1a5276; margin-bottom: 0.8rem; font-size: 1rem; }
+
+        /* ── Boutons ── */
         .btn {
-            display: inline-block; padding: 0.5rem 1rem; border-radius: 4px;
-            text-decoration: none; font-size: 0.9rem; cursor: pointer; border: none;
+            display: inline-block;
+            padding: 0.55rem 1.1rem;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border: none;
+            font-family: Arial, sans-serif;
+            transition: opacity 0.15s, transform 0.1s;
+            white-space: nowrap;
         }
-        .btn-bleu { background: #1a5276; color: white; }
-        .btn-vert { background: #1e8449; color: white; }
-        .btn-rouge { background: #c0392b; color: white; }
-        .btn-gris { background: #95a5a6; color: white; }
-        .messages { margin-bottom: 1rem; }
-        .messages .success { color: #1e8449; background: #eafaf1;
-            padding: 0.6rem 1rem; border-radius: 4px; margin-bottom: 0.5rem; }
-        .messages .error { color: #c0392b; background: #fdedec;
-            padding: 0.6rem 1rem; border-radius: 4px; margin-bottom: 0.5rem; }
+        .btn:active { transform: scale(0.97); }
+        .btn-bleu   { background: #1a5276; color: white; }
+        .btn-vert   { background: #1e8449; color: white; }
+        .btn-rouge  { background: #c0392b; color: white; }
+        .btn-gris   { background: #95a5a6; color: white; }
+        .btn-orange { background: #d35400; color: white; }
+        .btn:hover  { opacity: 0.88; }
+
+        /* Boutons larges pour mobile/terrain */
+        .btn-lg {
+            padding: 0.9rem 1.5rem;
+            font-size: 1.05rem;
+            border-radius: 6px;
+        }
+        .btn-full { width: 100%; text-align: center; display: block; }
+
+        /* ── Tableaux ── */
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.65rem 0.9rem; text-align: left;
+                 border-bottom: 1px solid #eee; font-size: 0.9rem; }
+        th { background: #eaf0fb; color: #1a5276; font-weight: bold;
+             font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        tr:hover { background: #fafbfc; }
+        tfoot td { background: #eaf0fb; }
+
+        /* ── Formulaires ── */
         .form-group { margin-bottom: 1rem; }
-        .form-group label { display: block; margin-bottom: 0.3rem;
-            font-weight: bold; color: #333; }
-        .form-group input, .form-group select {
-            width: 100%; padding: 0.6rem; border: 1px solid #ccc;
-            border-radius: 4px; font-size: 1rem;
+        .form-group label {
+            display: block;
+            margin-bottom: 0.35rem;
+            font-weight: bold;
+            font-size: 0.88rem;
+            color: #444;
         }
-        .form-actions { margin-top: 1.5rem; display: flex; gap: 0.8rem; }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.65rem 0.8rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-family: Arial, sans-serif;
+            transition: border-color 0.15s;
+        }
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #1a5276;
+            box-shadow: 0 0 0 3px rgba(26,82,118,0.1);
+        }
+        .form-actions { margin-top: 1.5rem; display: flex; gap: 0.8rem; flex-wrap: wrap; }
+
+        /* ── Messages ── */
+        .messages { margin-bottom: 1rem; }
+        .messages div {
+            padding: 0.75rem 1rem;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        .messages .success { color: #1e8449; background: #eafaf1;
+                             border-left: 4px solid #1e8449; }
+        .messages .error   { color: #c0392b; background: #fdedec;
+                             border-left: 4px solid #c0392b; }
+        .messages .warning { color: #d35400; background: #fef9e7;
+                             border-left: 4px solid #d35400; }
+
+        /* ── Badge rôle dans nav ── */
+        .badge-role {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            margin-left: 0.4rem;
+            vertical-align: middle;
+        }
+
+        /* ── Responsive mobile ── */
+        @media (max-width: 640px) {
+            .nav-links { display: none; }
+            .hamburger { display: flex; }
+
+            .container { padding: 0 0.75rem; margin: 1rem auto; }
+            .card { padding: 1rem; border-radius: 6px; }
+
+            h1 { font-size: 1.2rem; }
+
+            /* Tableaux scrollables sur mobile */
+            .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+            table { min-width: 500px; }
+            th, td { padding: 0.5rem 0.6rem; font-size: 0.82rem; }
+
+            .form-actions { flex-direction: column; }
+            .form-actions .btn { width: 100%; text-align: center; }
+
+            .btn { padding: 0.65rem 1rem; }
+        }
+
+        /* ── Print ── */
+        @media print {
+            nav, .no-print { display: none !important; }
+            .container { margin: 0; padding: 0; max-width: none; }
+            .card { box-shadow: none; padding: 0; }
+        }
     </style>
 </head>
 <body>
+
 <nav>
-    <span><strong>Virement Producteurs</strong></span>
-    <div>
-        <span>{{ user.get_full_name|default:user.username }}</span>
-        {% if user.profil.role == 'superuser' %}
-            <a href="{% url 'crma_liste' %}">CRMA</a>
-        {% elif user.profil.role == 'sous_superuser' %}
-            <a href="{% url 'bl_liste' %}">Bureaux Locaux</a>
-            <a href="{% url 'utilisateur_liste' %}">Utilisateurs</a>
-        {% elif user.profil.role == 'utilisateur' %}
-            <a href="{% url 'brouillard' %}">Brouillard</a>
+    <div class="nav-inner">
+        <a class="nav-brand" href="{% url 'tableau_de_bord' %}">
+            <span>🏦</span> Virement Producteurs
+        </a>
+
+        {% if user.is_authenticated %}
+        <!-- Menu desktop -->
+        <div class="nav-links">
+            <span class="nav-user">
+                {{ user.get_full_name|default:user.username }}
+                {% if user.profil.role == 'superuser' %}
+                    <span class="badge-role">National</span>
+                {% elif user.profil.role == 'sous_superuser' %}
+                    <span class="badge-role">{{ user.profil.crma.code }}</span>
+                {% elif user.profil.role == 'utilisateur' %}
+                    <span class="badge-role">BL {{ user.profil.bureau_local.code }}</span>
+                {% endif %}
+            </span>
+
+            {% if user.profil.role == 'superuser' %}
+                <a href="{% url 'tableau_de_bord' %}">🏠 Accueil</a>
+                <a href="{% url 'crma_liste' %}">🏛️ CRMA</a>
+                <a href="{% url 'historique_bons' %}">📋 Historique</a>
+            {% elif user.profil.role == 'sous_superuser' %}
+                <a href="{% url 'tableau_de_bord' %}">🏠 Accueil</a>
+                <a href="{% url 'bl_liste' %}">🏢 Bureaux Locaux</a>
+                <a href="{% url 'utilisateur_liste' %}">👥 Utilisateurs</a>
+                <a href="{% url 'historique_bons' %}">📋 Historique</a>
+            {% elif user.profil.role == 'utilisateur' %}
+                <a href="{% url 'tableau_de_bord' %}">🏠 Accueil</a>
+                <a href="{% url 'brouillard' %}">📒 Brouillard</a>
+                <a href="{% url 'historique_bons' %}">📋 Historique</a>
+            {% endif %}
+
+            <a href="{% url 'deconnexion' %}" class="deconnexion">⏏ Déconnexion</a>
+        </div>
+
+        <!-- Bouton hamburger mobile -->
+        <button class="hamburger" onclick="toggleMenu()" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
         {% endif %}
-        <a href="{% url 'deconnexion' %}">Déconnexion</a>
     </div>
+
+    {% if user.is_authenticated %}
+    <!-- Menu mobile déroulant -->
+    <div class="nav-mobile" id="nav-mobile">
+        <div class="nav-user-mobile">
+            {{ user.get_full_name|default:user.username }}
+            {% if user.profil.role == 'superuser' %} — Super-utilisateur national
+            {% elif user.profil.role == 'sous_superuser' %} — {{ user.profil.crma.nom }}
+            {% elif user.profil.role == 'utilisateur' %} — {{ user.profil.bureau_local.nom }}
+            {% endif %}
+        </div>
+
+        {% if user.profil.role == 'superuser' %}
+            <a href="{% url 'tableau_de_bord' %}">🏠 Accueil</a>
+            <a href="{% url 'crma_liste' %}">🏛️ Gestion des CRMA</a>
+            <a href="{% url 'historique_bons' %}">📋 Historique des bons</a>
+        {% elif user.profil.role == 'sous_superuser' %}
+            <a href="{% url 'tableau_de_bord' %}">🏠 Accueil</a>
+            <a href="{% url 'bl_liste' %}">🏢 Bureaux Locaux</a>
+            <a href="{% url 'utilisateur_liste' %}">👥 Utilisateurs</a>
+            <a href="{% url 'historique_bons' %}">📋 Historique des bons</a>
+        {% elif user.profil.role == 'utilisateur' %}
+            <a href="{% url 'tableau_de_bord' %}">🏠 Accueil</a>
+            <a href="{% url 'brouillard' %}">📒 Brouillard de caisse</a>
+            <a href="{% url 'choisir_versement' %}">💳 Éditer un versement</a>
+            <a href="{% url 'historique_bons' %}">📋 Historique des bons</a>
+        {% endif %}
+        <a href="{% url 'deconnexion' %}" style="color:#f1948a;">⏏ Déconnexion</a>
+    </div>
+    {% endif %}
 </nav>
+
 <div class="container">
     {% if messages %}
     <div class="messages">
         {% for message in messages %}
-            <div class="{{ message.tags }}">{{ message }}</div>
+        <div class="{{ message.tags }}">{{ message }}</div>
         {% endfor %}
     </div>
     {% endif %}
+
     {% block contenu %}{% endblock %}
 </div>
+
+<script>
+function toggleMenu() {
+    const menu = document.getElementById('nav-mobile');
+    menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+}
+// Fermer le menu si on clique ailleurs
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('nav-mobile');
+    const hamburger = document.querySelector('.hamburger');
+    if (menu && hamburger && !menu.contains(e.target) && !hamburger.contains(e.target)) {
+        menu.style.display = 'none';
+    }
+});
+</script>
+
 </body>
 </html>

@@ -1,15 +1,147 @@
 {% extends 'core/base.html' %}
-{% block titre %}Brouillard de caisse — {{ bl.nom }}{% endblock %}
+{% block titre %}Brouillard — {{ bl.nom }} — {{ date_selectionnee|date:"d/m/Y" }}{% endblock %}
 {% block contenu %}
-<div class="card">
-    <h1>Brouillard de caisse</h1>
-    <p style="color:#555; margin-bottom:1.5rem;">
-        {{ bl.nom }} — {{ aujourd_hui|date:"d/m/Y" }}
-    </p>
 
-    <!-- Formulaire de saisie -->
+<!-- Boutons d'action (masqués à l'impression) -->
+<div class="no-print" style="display:flex; gap:0.8rem; flex-wrap:wrap;
+     align-items:center; margin-bottom:1rem;">
+    <button onclick="window.print()" class="btn btn-bleu">
+        🖨️ Imprimer le brouillard
+    </button>
+    {% if est_aujourd_hui and lignes %}
+    <a href="{% url 'choisir_versement' %}" class="btn btn-vert">
+        Éditer un bon de versement →
+    </a>
+    {% endif %}
+</div>
+
+<!-- Sélecteur de date (masqué à l'impression) -->
+<div class="no-print card" style="margin-bottom:1rem;">
+    <h3 style="color:#1a5276; margin-bottom:0.8rem;">Consulter un brouillard</h3>
+    <div style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap;">
+        <div class="form-group" style="margin:0;">
+            <label>Choisir une date</label>
+            <input type="date" id="date-picker"
+                   value="{{ date_selectionnee|date:'Y-m-d' }}"
+                   max="{{ aujourd_hui|date:'Y-m-d' }}">
+        </div>
+        <button onclick="allerDate()" class="btn btn-bleu">Afficher</button>
+    </div>
+
+    {% if jours_disponibles %}
+    <div style="margin-top:1rem;">
+        <p style="font-size:0.85rem; color:#555; margin-bottom:0.5rem;">
+            Jours avec encaissements :
+        </p>
+        <div style="display:flex; flex-wrap:wrap; gap:0.5rem;">
+            {% for jour in jours_disponibles %}
+            <a href="?date={{ jour|date:'Y-m-d' }}"
+               class="btn {% if jour == date_selectionnee %}btn-bleu{% else %}btn-gris{% endif %}"
+               style="padding:0.3rem 0.8rem; font-size:0.82rem;">
+                {{ jour|date:"d/m/Y" }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ══ DOCUMENT IMPRIMABLE ══ -->
+<div class="card" id="zone-impression">
+
+    <!-- En-tête du brouillard -->
+    <div style="text-align:center; margin-bottom:1.5rem; border-bottom:2px solid #1a5276; padding-bottom:1rem;">
+        <div style="font-size:1.1rem; font-weight:bold; color:#1a5276;">
+            BROUILLARD DE CAISSE JOURNALIER
+        </div>
+        <div style="font-size:0.95rem; margin-top:0.3rem;">
+            {{ bl.crma.nom|upper }}
+        </div>
+        <div style="font-size:0.9rem; color:#555; margin-top:0.2rem;">
+            Bureau Local : {{ bl.nom }} ({{ bl.code }})
+        </div>
+        <div style="font-size:0.9rem; color:#555; margin-top:0.2rem;">
+            Date : {{ date_selectionnee|date:"d/m/Y" }}
+            {% if est_aujourd_hui %}
+            <span class="no-print" style="color:#1e8449; font-weight:bold;">
+                (aujourd'hui)
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Tableau des encaissements -->
+    <table>
+        <thead>
+            <tr>
+                <th style="width:60px;">N°</th>
+                <th style="width:80px;">Heure</th>
+                <th>N° Contrat</th>
+                <th style="text-align:right;">Montant (DA)</th>
+                <th>Saisi par</th>
+                {% if est_aujourd_hui %}
+                <th class="no-print" style="width:100px;">Action</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td style="text-align:center; color:#888;">{{ forloop.counter }}</td>
+                <td>{{ ligne.heure|time:"H:i" }}</td>
+                <td>{{ ligne.numero_contrat|default:"—" }}</td>
+                <td style="text-align:right; font-weight:bold;">
+                    {{ ligne.montant|floatformat:2 }}
+                </td>
+                <td style="font-size:0.85rem;">
+                    {{ ligne.saisi_par.get_full_name|default:ligne.saisi_par.username }}
+                </td>
+                {% if est_aujourd_hui %}
+                <td class="no-print">
+                    <form method="post"
+                          action="{% url 'encaissement_supprimer' ligne.pk %}"
+                          style="display:inline;"
+                          onsubmit="return confirm('Supprimer cette ligne ?')">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-rouge"
+                                style="padding:0.2rem 0.6rem; font-size:0.78rem;">
+                            ✕
+                        </button>
+                    </form>
+                </td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align:center; color:#888; padding:2rem;">
+                    Aucun encaissement pour cette journée.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if lignes %}
+        <tfoot>
+            <tr style="background:#eaf0fb; font-weight:bold;">
+                <td colspan="3" style="padding:0.7rem 1rem; color:#1a5276;">
+                    TOTAL DU JOUR
+                </td>
+                <td style="text-align:right; font-size:1.1rem;
+                            color:#1a5276; padding:0.7rem 1rem;">
+                    {{ total_jour|floatformat:2 }}
+                </td>
+                <td {% if est_aujourd_hui %}colspan="2"{% endif %}></td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+
+    <!-- Formule de saisie (aujourd'hui uniquement, masquée à l'impression) -->
+    {% if est_aujourd_hui %}
     <form method="post" action="{% url 'encaissement_ajouter' %}"
-          style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap; margin-bottom:2rem;">
+          class="no-print"
+          style="display:flex; gap:1rem; align-items:flex-end;
+                 flex-wrap:wrap; margin-top:1.5rem; padding-top:1rem;
+                 border-top:1px solid #eee;">
         {% csrf_token %}
         <div class="form-group" style="flex:1; min-width:180px; margin:0;">
             <label>N° Contrat (optionnel)</label>
@@ -19,73 +151,49 @@
             <label>Montant encaissé (DA) *</label>
             <input type="text" name="montant" placeholder="ex: 15000" required>
         </div>
-        <div style="padding-bottom:0.1rem;">
+        <div>
             <button type="submit" class="btn btn-vert">+ Ajouter</button>
         </div>
     </form>
+    {% endif %}
 
-    <!-- Tableau des encaissements du jour -->
-    <table>
-        <thead>
-            <tr>
-                <th>Heure</th>
-                <th>N° Contrat</th>
-                <th>Montant (DA)</th>
-                <th>Saisi par</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for ligne in lignes %}
-            <tr>
-                <td>{{ ligne.heure|time:"H:i" }}</td>
-                <td>{{ ligne.numero_contrat|default:"—" }}</td>
-                <td style="text-align:right; font-weight:bold;">
-                    {{ ligne.montant|floatformat:2 }}
-                </td>
-                <td>{{ ligne.saisi_par.get_full_name|default:ligne.saisi_par.username }}</td>
-                <td>
-                    <form method="post"
-                          action="{% url 'encaissement_supprimer' ligne.pk %}"
-                          style="display:inline;"
-                          onsubmit="return confirm('Supprimer cette ligne ?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-rouge"
-                                style="padding:0.3rem 0.7rem; font-size:0.8rem;">
-                            Supprimer
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% empty %}
-            <tr>
-                <td colspan="5" style="text-align:center; color:#888; padding:2rem;">
-                    Aucun encaissement saisi aujourd'hui.
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        {% if lignes %}
-        <tfoot>
-            <tr style="background:#eaf0fb;">
-                <td colspan="2" style="font-weight:bold; padding:0.7rem 1rem;">
-                    TOTAL DU JOUR
-                </td>
-                <td style="font-weight:bold; text-align:right; font-size:1.1rem;
-                            color:#1a5276; padding:0.7rem 1rem;">
-                    {{ total_jour|floatformat:2 }} DA
-                </td>
-                <td colspan="2"></td>
-            </tr>
-        </tfoot>
-        {% endif %}
-    </table>
-    {% if lignes %}
-    <div style="margin-top:1.5rem;">
-        <a href="{% url 'choisir_versement' %}" class="btn btn-bleu">
-            Éditer un bon de versement →
-        </a>
+    <!-- Pied de page imprimable -->
+    <div style="margin-top:2rem; padding-top:1rem; border-top:1px solid #ccc;
+                display:flex; justify-content:space-between; font-size:0.85rem;">
+        <div>
+            <div style="margin-bottom:3rem;">Signature de l'agent :</div>
+            <div>___________________________</div>
+        </div>
+        <div style="text-align:center;">
+            <div style="margin-bottom:3rem;">Visa responsable BL :</div>
+            <div>___________________________</div>
+        </div>
+        <div style="text-align:right; color:#888; font-size:0.8rem;">
+            Édité le {{ aujourd_hui|date:"d/m/Y" }}<br>
+            Application Virement Producteurs
+        </div>
     </div>
-    {% endif %}   
 </div>
+
+<!-- Styles impression -->
+<style>
+@media print {
+    nav, .no-print { display: none !important; }
+    .container { margin: 0; padding: 0; }
+    .card { box-shadow: none; border: none; padding: 0; }
+    @page { size: A4 portrait; margin: 15mm; }
+}
+</style>
+
+<script>
+function allerDate() {
+    const d = document.getElementById('date-picker').value;
+    if (d) window.location.href = '?date=' + d;
+}
+// Permettre Entrée sur le champ date
+document.getElementById('date-picker').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') allerDate();
+});
+</script>
+
 {% endblock %}

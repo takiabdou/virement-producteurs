@@ -1,9 +1,28 @@
 {% extends 'core/base.html' %}
-{% block titre %}Tableau de bord{% endblock %}
+{% block titre %}Tableau de bord — Super-utilisateur{% endblock %}
 {% block contenu %}
-<div class="card">
-    <h1>Bienvenue, {{ user.get_full_name|default:user.username }}</h1>
-    <p style="color:#555; margin-bottom:1.5rem;">Super-utilisateur national</p>
-    <a href="{% url 'crma_liste' %}" class="btn btn-bleu">Gérer les CRMA</a>
+<div class="card" style="border-left:4px solid #1a5276;">
+    <h1>Bonjour, {{ user.get_full_name|default:user.username }} 👋</h1>
+    <p style="color:#555; font-size:0.9rem;">Super-utilisateur national</p>
+</div>
+
+<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));
+            gap:1rem;">
+    <a href="{% url 'crma_liste' %}" class="card"
+       style="text-decoration:none; text-align:center; border-top:3px solid #1a5276;
+              transition:transform 0.15s;"
+       onmouseover="this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.transform='translateY(0)'">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">🏛️</div>
+        <div style="font-weight:bold; color:#1a5276;">Gestion des CRMA</div>
+    </a>
+    <a href="{% url 'historique_bons' %}" class="card"
+       style="text-decoration:none; text-align:center; border-top:3px solid #7d6608;
+              transition:transform 0.15s;"
+       onmouseover="this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.transform='translateY(0)'">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">📋</div>
+        <div style="font-weight:bold; color:#7d6608;">Historique global</div>
+    </a>
 </div>
 {% endblock %}

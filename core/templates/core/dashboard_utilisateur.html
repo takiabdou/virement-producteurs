@@ -1,13 +1,64 @@
 {% extends 'core/base.html' %}
-{% block titre %}Tableau de bord{% endblock %}
+{% block titre %}Tableau de bord — {{ user.profil.bureau_local.nom }}{% endblock %}
 {% block contenu %}
-<div class="card">
-    <h1>Bienvenue, {{ user.get_full_name|default:user.username }}</h1>
-    <p style="color:#555; margin-bottom:1.5rem;">
-        Bureau Local : {{ user.profil.bureau_local.nom }}
+
+<!-- Carte de bienvenue -->
+<div class="card" style="border-left: 4px solid #1a5276;">
+    <h1 style="margin-bottom:0.3rem;">
+        Bonjour, {{ user.first_name|default:user.username }} 👋
+    </h1>
+    <p style="color:#555; font-size:0.9rem;">
+        {{ user.profil.bureau_local.nom }} —
+        {{ user.profil.bureau_local.crma.nom }}
     </p>
-    <a href="{% url 'brouillard' %}" class="btn btn-bleu">
-        Ouvrir le brouillard de caisse
-    </a>
 </div>
+
+<!-- Actions rapides -->
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap:1rem; margin-bottom:1.5rem;">
+
+    <a href="{% url 'brouillard' %}" class="card"
+       style="text-decoration:none; text-align:center; cursor:pointer;
+              border-top:3px solid #1a5276; transition:transform 0.15s;"
+       onmouseover="this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.transform='translateY(0)'">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">📒</div>
+        <div style="font-weight:bold; color:#1a5276; font-size:1rem;">
+            Brouillard de caisse
+        </div>
+        <div style="color:#888; font-size:0.82rem; margin-top:0.3rem;">
+            Saisir les encaissements du jour
+        </div>
+    </a>
+
+    <a href="{% url 'choisir_versement' %}" class="card"
+       style="text-decoration:none; text-align:center; cursor:pointer;
+              border-top:3px solid #1e8449; transition:transform 0.15s;"
+       onmouseover="this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.transform='translateY(0)'">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">💳</div>
+        <div style="font-weight:bold; color:#1e8449; font-size:1rem;">
+            Éditer un versement
+        </div>
+        <div style="color:#888; font-size:0.82rem; margin-top:0.3rem;">
+            Générer le bon CCP ou bancaire
+        </div>
+    </a>
+
+    <a href="{% url 'historique_bons' %}" class="card"
+       style="text-decoration:none; text-align:center; cursor:pointer;
+              border-top:3px solid #7d6608; transition:transform 0.15s;"
+       onmouseover="this.style.transform='translateY(-2px)'"
+       onmouseout="this.style.transform='translateY(0)'">
+        <div style="font-size:2.5rem; margin-bottom:0.5rem;">📋</div>
+        <div style="font-weight:bold; color:#7d6608; font-size:1rem;">
+            Historique
+        </div>
+        <div style="color:#888; font-size:0.82rem; margin-top:0.3rem;">
+            Consulter et réimprimer les bons
+        </div>
+    </a>
+
+</div>
+
 {% endblock %}

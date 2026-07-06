@@ -29,4 +29,7 @@ urlpatterns = [
     # Versement
     path('versement/', views.choisir_versement, name='choisir_versement'),
     path('versement/apercu/', views.apercu_versement, name='apercu_versement'),
+    # Historique
+    path('historique/', views.historique_bons, name='historique_bons'),
+    path('historique/<int:pk>/reimprimer/', views.reimprimer_bon, name='reimprimer_bon'),
 ]
