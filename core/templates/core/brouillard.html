@@ -106,16 +106,23 @@
                 </td>
                 {% if est_aujourd_hui %}
                 <td class="no-print">
+                    {% if ligne.saisi_par == user %}
                     <form method="post"
-                          action="{% url 'encaissement_supprimer' ligne.pk %}"
-                          style="display:inline;"
-                          onsubmit="return confirm('Supprimer cette ligne ?')">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-rouge"
-                                style="padding:0.2rem 0.6rem; font-size:0.78rem;">
-                            ✕
-                        </button>
+                    action="{% url 'encaissement_supprimer' ligne.pk %}"
+                    style="display:inline;"
+                    onsubmit="return confirm('Supprimer cette ligne ?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-rouge"
+                        style="padding:0.2rem 0.6rem; font-size:0.78rem;"
+                        title="Supprimer cette ligne">
+                        ✕
+                    </button>
                     </form>
+                    {% else %}
+                    <span style="color:#ccc; font-size:0.78rem;" title="Saisi par un autre agent">
+                        —
+                    </span>
+                    {% endif %}
                 </td>
                 {% endif %}
             </tr>

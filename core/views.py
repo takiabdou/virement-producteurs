@@ -351,11 +351,16 @@ def encaissement_ajouter(request):
 
 @role_required('utilisateur')
 def encaissement_supprimer(request, pk):
-    """Suppression d'une ligne d'encaissement de la journée en cours."""
+    """Suppression d'une ligne d'encaissement de la journée en cours.
+    L'utilisateur ne peut supprimer que les lignes qu'il a lui-même saisies."""
     bl = request.user.profil.bureau_local
     aujourd_hui = timezone.localdate()
     ligne = get_object_or_404(
-        LigneEncaissement, pk=pk, bureau_local=bl, date=aujourd_hui
+        LigneEncaissement,
+        pk=pk,
+        bureau_local=bl,
+        date=aujourd_hui,
+        saisi_par=request.user   # ← AJOUT : on vérifie que c'est bien lui
     )
     if request.method == 'POST':
         ligne.delete()

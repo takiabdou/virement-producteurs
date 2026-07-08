@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -94,7 +95,10 @@
 <body>
 <div class="login-box">
     <div class="login-logo">
-        <div class="icon">🏦</div>
+        <img src="{% static 'core/img/logo-192.png' %}" alt="CNMA"
+            style="height:80px; width:80px; border-radius:50%;
+                object-fit:cover; margin-bottom:0.5rem;
+                box-shadow:0 4px 12px rgba(0,0,0,0.15);">
         <h1>Virement Producteurs</h1>
         <p>Caisses Régionales de Mutualité Agricole</p>
     </div>
