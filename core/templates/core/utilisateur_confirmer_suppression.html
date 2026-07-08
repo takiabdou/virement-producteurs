@@ -1,15 +1,21 @@
 {% extends 'core/base.html' %}
-{% block titre %}Confirmer la suppression{% endblock %}
+{% block titre %}Confirmer la désactivation{% endblock %}
 {% block contenu %}
 <div class="card">
-    <h1>Confirmer la suppression</h1>
-    <p>Êtes-vous sûr de vouloir supprimer l'utilisateur
+    <h1>Confirmer la désactivation</h1>
+    <p>Êtes-vous sûr de vouloir désactiver le compte de
         <strong>{{ objet.user.get_full_name }}</strong>
         ({{ objet.user.username }}) ?</p>
+    <p style="color:#555; margin-top:0.8rem; font-size:0.9rem;
+              background:#eaf0fb; padding:0.8rem; border-radius:5px;">
+        ℹ️ Le compte ne pourra plus se connecter, mais tout son historique
+        (encaissements, bons de versement) reste conservé et consultable.
+        Vous pourrez le réactiver à tout moment depuis la liste des utilisateurs.
+    </p>
     <form method="post" style="margin-top:1rem;">
         {% csrf_token %}
         <div class="form-actions">
-            <button type="submit" class="btn btn-rouge">Oui, supprimer</button>
+            <button type="submit" class="btn btn-rouge">Oui, désactiver</button>
             <a href="{% url 'utilisateur_liste' %}" class="btn btn-gris">Annuler</a>
         </div>
     </form>

@@ -9,23 +9,42 @@
         <thead>
             <tr>
                 <th>Identifiant</th><th>Nom complet</th>
-                <th>Bureau Local</th><th>Poste</th><th>Actions</th>
+                <th>Bureau Local</th><th>Poste</th><th>Statut</th><th>Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for profil in profils %}
-            <tr>
+            <tr {% if not profil.user.is_active %}style="opacity:0.55;"{% endif %}>
                 <td>{{ profil.user.username }}</td>
                 <td>{{ profil.user.get_full_name }}</td>
                 <td>{{ profil.bureau_local }}</td>
                 <td>{{ profil.poste }}</td>
                 <td>
+                    {% if profil.user.is_active %}
+                        <span style="color:#1e8449; font-weight:bold; font-size:0.82rem;">● Actif</span>
+                    {% else %}
+                        <span style="color:#c0392b; font-weight:bold; font-size:0.82rem;">● Désactivé</span>
+                    {% endif %}
+                </td>
+                <td>
                     <a href="{% url 'utilisateur_modifier' profil.pk %}" class="btn btn-bleu">Modifier</a>
-                    <a href="{% url 'utilisateur_supprimer' profil.pk %}" class="btn btn-rouge">Supprimer</a>
+                    <a href="{% url 'utilisateur_muter' profil.pk %}" class="btn btn-orange">Muter</a>
+                    {% if profil.user.is_active %}
+                    <a href="{% url 'utilisateur_supprimer' profil.pk %}" class="btn btn-rouge">Désactiver</a>
+                    {% else %}
+                    <form method="post" action="{% url 'utilisateur_reactiver' profil.pk %}"
+                          style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-vert"
+                                style="padding:0.55rem 1.1rem; font-size:0.9rem;">
+                            Réactiver
+                        </button>
+                    </form>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
-            <tr><td colspan="5">Aucun utilisateur enregistré.</td></tr>
+            <tr><td colspan="6">Aucun utilisateur enregistré.</td></tr>
             {% endfor %}
         </tbody>
     </table>

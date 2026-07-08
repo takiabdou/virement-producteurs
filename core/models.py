@@ -138,3 +138,39 @@ class BonVersement(models.Model):
 
     def __str__(self):
         return f"{self.numero_emission} — {self.montant_a_verser} DA"
+    
+class HistoriqueMutation(models.Model):
+    profil = models.ForeignKey(
+        Profil,
+        on_delete=models.CASCADE,
+        related_name='mutations'
+    )
+    ancien_bl = models.ForeignKey(
+        BureauLocal,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='mutations_depart'
+    )
+    nouveau_bl = models.ForeignKey(
+        BureauLocal,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='mutations_arrivee'
+    )
+    date_mutation = models.DateTimeField(auto_now_add=True)
+    effectuee_par = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='mutations_effectuees'
+    )
+
+    class Meta:
+        ordering = ['-date_mutation']
+
+    def __str__(self):
+        return (
+            f"{self.profil.user.username}: "
+            f"{self.ancien_bl} → {self.nouveau_bl} "
+            f"({self.date_mutation.strftime('%d/%m/%Y')})"
+        )    

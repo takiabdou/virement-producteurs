@@ -11,6 +11,7 @@ from .models import CRMA, BureauLocal, Profil, LigneEncaissement, BonVersement
 from decimal import Decimal
 import datetime
 from .calculs import calculer_montant_ccp, montant_en_lettres, generer_numero_emission
+from .models import HistoriqueMutation
 
 def connexion(request):
     """Page de connexion commune à tous les rôles."""
@@ -249,17 +250,38 @@ def utilisateur_modifier(request, pk):
 
 @role_required('sous_superuser')
 def utilisateur_supprimer(request, pk):
+    """Désactive un compte utilisateur (au lieu de le supprimer),
+    afin de préserver l'historique des encaissements et bons de versement."""
     crma = request.user.profil.crma
     profil = get_object_or_404(
         Profil, pk=pk, role='utilisateur', bureau_local__crma=crma
     )
     if request.method == 'POST':
-        profil.user.delete()
-        messages.success(request, "Utilisateur supprimé.")
+        profil.user.is_active = False
+        profil.user.save()
+        messages.success(
+            request,
+            f"Compte de {profil.user.get_full_name()} désactivé. "
+            f"L'historique reste conservé."
+        )
         return redirect('utilisateur_liste')
     return render(request, 'core/utilisateur_confirmer_suppression.html', {
         'objet': profil, 'crma': crma
     })
+
+
+@role_required('sous_superuser')
+def utilisateur_reactiver(request, pk):
+    """Réactive un compte utilisateur précédemment désactivé."""
+    crma = request.user.profil.crma
+    profil = get_object_or_404(
+        Profil, pk=pk, role='utilisateur', bureau_local__crma=crma
+    )
+    if request.method == 'POST':
+        profil.user.is_active = True
+        profil.user.save()
+        messages.success(request, f"Compte de {profil.user.get_full_name()} réactivé.")
+    return redirect('utilisateur_liste')
 
 @role_required('utilisateur')
 def brouillard(request):
@@ -559,3 +581,51 @@ def reimprimer_bon(request, pk):
         return render(request, 'core/bon_ccp.html', context)
     else:
         return render(request, 'core/bon_bancaire.html', context)
+    
+@role_required('sous_superuser')
+def utilisateur_muter(request, pk):
+    """Change le Bureau Local d'un utilisateur, avec historique."""
+    crma = request.user.profil.crma
+    profil = get_object_or_404(
+        Profil, pk=pk, role='utilisateur', bureau_local__crma=crma
+    )
+
+    if request.method == 'POST':
+        nouveau_bl_id = request.POST.get('nouveau_bl')
+        nouveau_bl = get_object_or_404(BureauLocal, pk=nouveau_bl_id, crma=crma)
+        ancien_bl = profil.bureau_local
+
+        if nouveau_bl == ancien_bl:
+            messages.warning(request, "Cet utilisateur est déjà affecté à ce Bureau Local.")
+            return redirect('utilisateur_liste')
+
+        HistoriqueMutation.objects.create(
+            profil=profil,
+            ancien_bl=ancien_bl,
+            nouveau_bl=nouveau_bl,
+            effectuee_par=request.user
+        )
+
+        profil.bureau_local = nouveau_bl
+        profil.save()
+
+        messages.success(
+            request,
+            f"{profil.user.get_full_name()} a été muté(e) de "
+            f"« {ancien_bl} » vers « {nouveau_bl} »."
+        )
+        return redirect('utilisateur_liste')
+
+    # BL proposés : ceux de la CRMA, sauf le BL actuel
+    autres_bl = BureauLocal.objects.filter(crma=crma)
+    if profil.bureau_local:
+        autres_bl = autres_bl.exclude(pk=profil.bureau_local.pk)
+
+    historique = profil.mutations.all()[:10]
+
+    return render(request, 'core/utilisateur_muter.html', {
+        'profil': profil,
+        'autres_bl': autres_bl,
+        'crma': crma,
+        'historique': historique,
+    })

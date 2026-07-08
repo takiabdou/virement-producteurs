@@ -32,4 +32,7 @@ urlpatterns = [
     # Historique
     path('historique/', views.historique_bons, name='historique_bons'),
     path('historique/<int:pk>/reimprimer/', views.reimprimer_bon, name='reimprimer_bon'),
+    path('utilisateurs/<int:pk>/muter/', views.utilisateur_muter, name='utilisateur_muter'),
+    # URL de réactivation
+    path('utilisateurs/<int:pk>/reactiver/', views.utilisateur_reactiver, name='utilisateur_reactiver'),
 ]

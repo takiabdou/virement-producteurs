@@ -98,7 +98,11 @@
                     {{ ligne.montant|floatformat:2 }}
                 </td>
                 <td style="font-size:0.85rem;">
-                    {{ ligne.saisi_par.get_full_name|default:ligne.saisi_par.username }}
+                    {% if ligne.saisi_par %}
+                        {{ ligne.saisi_par.get_full_name|default:ligne.saisi_par.username }}
+                    {% else %}
+                        <em style="color:#aaa;">Agent supprimé</em>
+                    {% endif %}
                 </td>
                 {% if est_aujourd_hui %}
                 <td class="no-print">

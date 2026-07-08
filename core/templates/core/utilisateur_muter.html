@@ -1,0 +1,64 @@
+{% extends 'core/base.html' %}
+{% block titre %}Mutation — {{ profil.user.get_full_name }}{% endblock %}
+{% block contenu %}
+<div class="card">
+    <h1>Mutation de Bureau Local</h1>
+
+    <div class="card" style="background:#eaf0fb; margin-bottom:1.5rem;">
+        <table style="font-size:0.9rem;">
+            <tr>
+                <td style="color:#555; padding:0.3rem 1rem 0.3rem 0;">Agent</td>
+                <td><strong>{{ profil.user.get_full_name }}</strong>
+                    ({{ profil.user.username }})</td>
+            </tr>
+            <tr>
+                <td style="color:#555;">Bureau Local actuel</td>
+                <td><strong style="color:#1a5276;">
+                    {{ profil.bureau_local|default:"Aucun" }}
+                </strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            <label>Nouveau Bureau Local</label>
+            <select name="nouveau_bl" required>
+                <option value="">— Choisir —</option>
+                {% for bl in autres_bl %}
+                <option value="{{ bl.pk }}">{{ bl.code }} — {{ bl.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-vert"
+                    onclick="return confirm('Confirmer la mutation de cet agent ?')">
+                Confirmer la mutation
+            </button>
+            <a href="{% url 'utilisateur_liste' %}" class="btn btn-gris">Annuler</a>
+        </div>
+    </form>
+
+    {% if historique %}
+    <h3 style="margin-top:2rem; margin-bottom:0.8rem;">Historique des mutations</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th><th>Ancien BL</th><th>Nouveau BL</th><th>Effectuée par</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in historique %}
+            <tr>
+                <td>{{ m.date_mutation|date:"d/m/Y H:i" }}</td>
+                <td>{{ m.ancien_bl|default:"—" }}</td>
+                <td>{{ m.nouveau_bl|default:"—" }}</td>
+                <td>{{ m.effectuee_par.get_full_name|default:m.effectuee_par.username }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+</div>
+{% endblock %}

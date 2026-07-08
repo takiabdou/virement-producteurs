@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import CRMA, BureauLocal, Profil, LigneEncaissement
+from .models import CRMA, BureauLocal, Profil, LigneEncaissement, BonVersement, HistoriqueMutation
 
 @admin.register(CRMA)
 class CRMAAdmin(admin.ModelAdmin):
@@ -22,3 +23,8 @@ class ProfilAdmin(admin.ModelAdmin):
 class LigneEncaissementAdmin(admin.ModelAdmin):
     list_display = ('date', 'bureau_local', 'numero_contrat', 'montant', 'saisi_par')
     list_filter = ('date', 'bureau_local')
+
+@admin.register(HistoriqueMutation)
+class HistoriqueMutationAdmin(admin.ModelAdmin):
+    list_display = ('profil', 'ancien_bl', 'nouveau_bl', 'date_mutation', 'effectuee_par')
+    list_filter = ('ancien_bl__crma',)
