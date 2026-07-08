@@ -19,6 +19,11 @@ class CRMA(models.Model):
 
     date_creation = models.DateTimeField(auto_now_add=True)
 
+    deduire_droits_ccp = models.BooleanField(
+        default=True,
+        verbose_name="Déduire les droits Algérie Poste (CCP)"
+    )
+
     def __str__(self):
         return f"{self.code} - {self.nom}"
 

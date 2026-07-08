@@ -1,9 +1,14 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#1a5276">
+    <link rel="icon" type="image/x-icon" href="{% static 'core/img/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'core/img/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'core/img/favicon-16x16.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'core/img/apple-touch-icon.png' %}">
     <title>{% block titre %}Virement Producteurs{% endblock %}</title>
     <style>
         /* ── Reset & base ── */
@@ -264,7 +269,9 @@
 <nav>
     <div class="nav-inner">
         <a class="nav-brand" href="{% url 'tableau_de_bord' %}">
-            <span>🏦</span> Virement Producteurs
+            <img src="{% static 'core/img/logo-192.png' %}" alt="CNMA"
+                style="height:28px; width:28px; border-radius:50%;">
+            Virement Producteurs
         </a>
 
         {% if user.is_authenticated %}
@@ -363,6 +370,12 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
-
+<footer style="text-align:center; padding:1.2rem 1rem; margin-top:2rem;
+               color:#999; font-size:0.78rem; border-top:1px solid #e0e0e0;
+               background:white;">
+    Développée par HALIMI Abdellah Takieddine — Chargé du service informatique
+    de CRMA de Saïda<br>
+    © 2026 Caisse Régionale de Mutualité Agricole de Saïda
+</footer>
 </body>
 </html>

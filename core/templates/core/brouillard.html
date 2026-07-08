@@ -8,9 +8,13 @@
     <button onclick="window.print()" class="btn btn-bleu">
         🖨️ Imprimer le brouillard
     </button>
-    {% if est_aujourd_hui and lignes %}
-    <a href="{% url 'choisir_versement' %}" class="btn btn-vert">
-        Éditer un bon de versement →
+    {% if lignes %}
+    <a href="{% url 'choisir_versement' %}?date={{ date_selectionnee|date:'Y-m-d' }}"
+       class="btn btn-vert">
+        Éditer un bon de versement
+        {% if not est_aujourd_hui %}
+            (pour le {{ date_selectionnee|date:"d/m/Y" }})
+        {% endif %} →
     </a>
     {% endif %}
 </div>

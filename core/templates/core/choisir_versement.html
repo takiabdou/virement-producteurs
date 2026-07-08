@@ -4,13 +4,64 @@
 <div class="card">
     <h1>Édition du bon de versement</h1>
     <p style="color:#555; margin-bottom:1.5rem;">
-        {{ bl.nom }} — {{ aujourd_hui|date:"d/m/Y" }}
+        {{ bl.nom }} — {{ date_choisie|date:"d/m/Y" }}
+        {% if not est_aujourd_hui %}
+        <span style="background:#fef9e7; color:#d35400; padding:0.2rem 0.6rem;
+                     border-radius:4px; font-size:0.8rem; margin-left:0.5rem;">
+            Date antérieure
+        </span>
+        {% endif %}
     </p>
+
+    {% if bons_existants %}
+    <div class="card" style="background:#fdedec; border-left:4px solid #c0392b;
+         margin-bottom:1.5rem;">
+        <strong style="color:#c0392b;">⚠ Attention : des bons existent déjà pour cette date</strong>
+        <ul style="margin-top:0.5rem; margin-left:1.2rem; font-size:0.88rem;">
+            {% for b in bons_existants %}
+            <li>{{ b.get_type_versement_display }} — {{ b.numero_emission }} —
+                {{ b.montant_a_verser|floatformat:2 }} DA</li>
+            {% endfor %}
+        </ul>
+        <p style="font-size:0.82rem; color:#888; margin-top:0.5rem;">
+            Vérifiez l'historique avant de générer un nouveau bon pour éviter un doublon.
+        </p>
+    </div>
+    {% endif %}
+
+    <div class="card" style="margin-bottom:1.5rem; background:#fdf6e3;
+         border-left:4px solid #d35400;">
+        <label style="display:flex; align-items:center; gap:0.8rem;
+                      cursor:pointer; font-weight:bold; color:#7d6608;">
+            <input type="checkbox" id="toggle-droits"
+                   {% if crma.deduire_droits_ccp %}checked{% endif %}
+                   onchange="toggleDroits(this)"
+                   style="width:20px; height:20px; cursor:pointer;">
+            Déduire les droits Algérie Poste sur le versement CCP
+        </label>
+        <p style="font-size:0.8rem; color:#888; margin-top:0.5rem; margin-left:2.1rem;">
+            {% if crma.deduire_droits_ccp %}
+                Actif — les droits seront déduits du montant à verser.
+            {% else %}
+                Inactif — le montant intégral sera versé, sans déduction
+                (comme BADR/BNA).
+            {% endif %}
+            Ce réglage est mémorisé pour les prochains versements de {{ crma.nom }}.
+        </p>
+    </div>
+
+    <script>
+    function toggleDroits(checkbox) {
+        const dateParam = "{{ date_choisie|date:'Y-m-d' }}";
+        window.location.href = '?deduire_ccp=' + (checkbox.checked ? '1' : '0') +
+                                '&date=' + dateParam;
+    }
+    </script>
 
     <table style="margin-bottom:1.5rem; max-width:500px;">
         <tr>
             <td style="padding:0.5rem 1rem 0.5rem 0; color:#555;">
-                Total encaissé du jour
+                Total encaissé du {{ date_choisie|date:"d/m/Y" }}
             </td>
             <td style="font-weight:bold; font-size:1.1rem;">
                 {{ total_jour|floatformat:2 }} DA
@@ -18,7 +69,11 @@
         </tr>
         <tr style="background:#eaf0fb;">
             <td style="padding:0.5rem 1rem 0.5rem 0; color:#1a5276;">
-                ▶ Net CCP (après droits {{ droits_ccp }} DA)
+                {% if crma.deduire_droits_ccp %}
+                    ▶ Net CCP (après droits {{ droits_ccp }} DA)
+                {% else %}
+                    ▶ Net CCP (sans déduction)
+                {% endif %}
             </td>
             <td style="font-weight:bold; color:#1a5276;">
                 {{ net_ccp|floatformat:2 }} DA
@@ -40,6 +95,7 @@
 
     <form method="post" action="{% url 'apercu_versement' %}">
         {% csrf_token %}
+        <input type="hidden" name="date_versement" value="{{ date_choisie|date:'Y-m-d' }}">
         <div style="display:flex; gap:1rem; flex-wrap:wrap;">
             <button type="submit" name="type_versement" value="CCP"
                     class="btn btn-bleu" style="font-size:1rem; padding:0.8rem 2rem;">
@@ -55,7 +111,8 @@
             </button>
         </div>
         <div style="margin-top:1rem;">
-            <a href="{% url 'brouillard' %}" class="btn btn-gris">
+            <a href="{% url 'brouillard' %}?date={{ date_choisie|date:'Y-m-d' }}"
+               class="btn btn-gris">
                 ← Retour au brouillard
             </a>
         </div>

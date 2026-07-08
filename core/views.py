@@ -342,36 +342,66 @@ def encaissement_supprimer(request, pk):
 
 @role_required('utilisateur')
 def choisir_versement(request):
-    """Page de choix du mode de versement et confirmation du montant."""
     bl = request.user.profil.bureau_local
     crma = bl.crma
     aujourd_hui = datetime.date.today()
 
-    # Récupérer le total du jour
-    lignes = LigneEncaissement.objects.filter(
-        bureau_local=bl,
-        date=aujourd_hui
-    )
+    # Date du brouillard à traiter (aujourd'hui par défaut, ou date antérieure)
+    date_str = request.GET.get('date')
+    if date_str:
+        try:
+            date_choisie = datetime.date.fromisoformat(date_str)
+        except ValueError:
+            date_choisie = aujourd_hui
+    else:
+        date_choisie = aujourd_hui
+
+    if date_choisie > aujourd_hui:
+        messages.error(request, "Impossible d'éditer un versement pour une date future.")
+        return redirect('brouillard')
+
+    # Bascule du mode droits CCP (conserve la date dans l'URL)
+    toggle = request.GET.get('deduire_ccp')
+    if toggle in ('0', '1'):
+        nouvelle_valeur = (toggle == '1')
+        if nouvelle_valeur != crma.deduire_droits_ccp:
+            crma.deduire_droits_ccp = nouvelle_valeur
+            crma.save()
+
+    lignes = LigneEncaissement.objects.filter(bureau_local=bl, date=date_choisie)
     total_jour = sum(l.montant for l in lignes) if lignes else Decimal('0')
 
     if total_jour == 0:
-        messages.error(request, "Aucun encaissement saisi aujourd'hui.")
+        messages.error(
+            request,
+            f"Aucun encaissement saisi le {date_choisie.strftime('%d/%m/%Y')}."
+        )
         return redirect('brouillard')
 
-    # Calculer les montants pour chaque mode
-    droits_ccp, net_ccp = calculer_montant_ccp(total_jour)
+    # Avertir si des bons existent déjà pour cette date (évite les doublons)
+    bons_existants = BonVersement.objects.filter(
+        bureau_local=bl, date_versement=date_choisie
+    )
+
+    if crma.deduire_droits_ccp:
+        droits_ccp, net_ccp = calculer_montant_ccp(total_jour)
+    else:
+        droits_ccp = Decimal('0')
+        net_ccp = total_jour
 
     context = {
         'bl': bl,
         'crma': crma,
         'aujourd_hui': aujourd_hui,
+        'date_choisie': date_choisie,
+        'est_aujourd_hui': date_choisie == aujourd_hui,
         'total_jour': total_jour,
         'droits_ccp': droits_ccp,
         'net_ccp': net_ccp,
-        'net_banque': total_jour,  # Pas de déduction pour BADR/BNA
+        'net_banque': total_jour,
+        'bons_existants': bons_existants,
     }
     return render(request, 'core/choisir_versement.html', context)
-
 
 @role_required('utilisateur')
 def apercu_versement(request):
@@ -384,31 +414,36 @@ def apercu_versement(request):
     aujourd_hui = datetime.date.today()
     type_versement = request.POST.get('type_versement')
 
+    # Récupérer la date du brouillard traité (transmise par le formulaire)
+    date_str = request.POST.get('date_versement')
+    if date_str:
+        try:
+            date_choisie = datetime.date.fromisoformat(date_str)
+        except ValueError:
+            date_choisie = aujourd_hui
+    else:
+        date_choisie = aujourd_hui
+
+    if date_choisie > aujourd_hui:
+        messages.error(request, "Date invalide.")
+        return redirect('brouillard')
+
     if type_versement not in ('CCP', 'BADR', 'BNA'):
         messages.error(request, "Mode de versement invalide.")
         return redirect('choisir_versement')
 
-    # Récupérer le total du jour
-    lignes = LigneEncaissement.objects.filter(
-        bureau_local=bl,
-        date=aujourd_hui
-    )
+    lignes = LigneEncaissement.objects.filter(bureau_local=bl, date=date_choisie)
     total_jour = sum(l.montant for l in lignes) if lignes else Decimal('0')
 
-    # Calculer selon le mode
-    if type_versement == 'CCP':
+    if type_versement == 'CCP' and crma.deduire_droits_ccp:
         droits, montant_a_verser = calculer_montant_ccp(total_jour)
     else:
         droits = Decimal('0')
         montant_a_verser = total_jour
 
-    # Générer le numéro d'émission
-    numero = generer_numero_emission(crma, bl, type_versement, aujourd_hui)
-
-    # Montant en lettres
+    numero = generer_numero_emission(crma, bl, type_versement, date_choisie)
     montant_lettres = montant_en_lettres(montant_a_verser)
 
-    # Créer le bon en base
     bon = BonVersement.objects.create(
         bureau_local=bl,
         emis_par=request.user,
@@ -417,7 +452,7 @@ def apercu_versement(request):
         montant_jour=total_jour,
         droits_poste=droits,
         montant_a_verser=montant_a_verser,
-        date_versement=aujourd_hui,
+        date_versement=date_choisie,
     )
 
     context = {
@@ -426,7 +461,7 @@ def apercu_versement(request):
         'crma': crma,
         'user': request.user,
         'montant_lettres': montant_lettres,
-        'aujourd_hui': aujourd_hui,
+        'aujourd_hui': date_choisie,   # Date affichée sur le document
         'type_versement': type_versement,
     }
 
@@ -434,9 +469,7 @@ def apercu_versement(request):
         return render(request, 'core/bon_ccp.html', context)
     else:
         return render(request, 'core/bon_bancaire.html', context)
-
- # ─── Historique des bons de versement ────────────────────────────────────────
-
+    
 @login_required
 def historique_bons(request):
     """
