@@ -1,12 +1,13 @@
 {% extends 'core/base.html' %}
 {% block titre %}Historique des bons de versement{% endblock %}
+
 {% block contenu %}
 <div class="card">
     <h1>Historique des bons de versement</h1>
 
     <!-- Filtres -->
     <form method="get" style="display:flex; gap:1rem; flex-wrap:wrap;
-                               align-items:flex-end; margin-bottom:1.5rem;">
+         align-items:flex-end; margin-bottom:1.5rem;">
         <div class="form-group" style="margin:0; flex:1; min-width:140px;">
             <label>Du</label>
             <input type="date" name="date_debut" value="{{ date_debut }}">
@@ -45,16 +46,16 @@
         </thead>
         <tbody>
             {% for bon in bons %}
-            <tr>
+            <tr {% if bon.statut == 'ANNULE' %}style="opacity:0.45; background:#f5f5f5;"{% endif %}>
                 <td style="font-family:monospace; font-size:0.82rem;">
                     {{ bon.numero_emission }}
                 </td>
                 <td>{{ bon.date_emission|date:"d/m/Y" }}</td>
                 <td>
                     <span style="padding:0.2rem 0.6rem; border-radius:3px;
-                        font-size:0.8rem; font-weight:bold;
-                        background:{% if bon.type_versement == 'CCP' %}#eaf0fb;color:#1a5276
-                        {% else %}#eafaf1;color:#1e8449{% endif %}">
+                                 font-size:0.8rem; font-weight:bold;
+                                 background:{% if bon.type_versement == 'CCP' %}#eaf0fb;color:#1a5276
+                                 {% else %}#eafaf1;color:#1e8449{% endif %}">
                         {{ bon.type_versement }}
                     </span>
                 </td>
@@ -68,11 +69,32 @@
                     {{ bon.montant_a_verser|floatformat:2 }}
                 </td>
                 <td>
-                    <a href="{% url 'reimprimer_bon' bon.pk %}"
-                       class="btn btn-bleu"
-                       style="padding:0.3rem 0.7rem; font-size:0.8rem;">
-                        🖨️ Réimprimer
-                    </a>
+                    {% if bon.statut == 'BROUILLON' %}
+                        <span style="color:#d35400; font-size:0.8rem; font-weight:bold;">
+                            ⏳ Brouillon
+                        </span>
+                        <a href="{% url 'reimprimer_bon' bon.pk %}"
+                           class="btn btn-orange"
+                           style="padding:0.3rem 0.7rem; font-size:0.8rem; margin-left:0.3rem;">
+                            ✏️ Reprendre
+                        </a>
+                    {% elif bon.statut == 'CONFIRME' %}
+                        <a href="{% url 'reimprimer_bon' bon.pk %}"
+                           class="btn btn-bleu"
+                           style="padding:0.3rem 0.7rem; font-size:0.8rem;">
+                            🖨️ Voir / Imprimer
+                        </a>
+                    {% elif bon.statut == 'ANNULE' %}
+                        <span style="color:#c0392b; font-size:0.78rem;">
+                            ✕ Annulé
+                            {% if bon.annule_par %}
+                                par {{ bon.annule_par.get_full_name|default:bon.annule_par.username }}
+                            {% endif %}
+                            {% if bon.annule_le %}
+                                le {{ bon.annule_le|date:"d/m/Y H:i" }}
+                            {% endif %}
+                        </span>
+                    {% endif %}
                 </td>
             </tr>
             {% empty %}
@@ -90,7 +112,7 @@
                     TOTAL DE LA PÉRIODE
                 </td>
                 <td style="text-align:right; font-weight:bold;
-                            font-size:1.1rem; color:#1a5276; padding:0.7rem 1rem;">
+                           font-size:1.1rem; color:#1a5276; padding:0.7rem 1rem;">
                     {{ total_periode|floatformat:2 }}
                 </td>
                 <td></td>

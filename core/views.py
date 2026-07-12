@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from .forms import CRMAForm, BureauLocalForm, UserCreationFormCustom, UserModificationForm, ProfilForm
 from .decorators import role_required
 from django.contrib.auth.models import User
@@ -406,8 +407,11 @@ def choisir_versement(request):
         return redirect('brouillard')
 
     # Avertir si des bons existent déjà pour cette date (évite les doublons)
+        # Avertir si des bons CONFIRMÉS existent déjà pour cette date
     bons_existants = BonVersement.objects.filter(
-        bureau_local=bl, date_versement=date_choisie
+        bureau_local=bl,
+        date_versement=date_choisie,
+        statut='CONFIRME'
     )
 
     if crma.deduire_droits_ccp:
@@ -432,7 +436,11 @@ def choisir_versement(request):
 
 @role_required('utilisateur')
 def apercu_versement(request):
-    """Génère et affiche le bon de versement selon le mode choisi."""
+    """
+    Crée ou met à jour un bon en statut BROUILLON.
+    Si un brouillon existe déjà pour ce BL + cette date + ce type,
+    il est mis à jour (pas de doublon).
+    """
     if request.method != 'POST':
         return redirect('brouillard')
 
@@ -440,9 +448,8 @@ def apercu_versement(request):
     crma = bl.crma
     aujourd_hui = datetime.date.today()
     type_versement = request.POST.get('type_versement')
-
-    # Récupérer la date du brouillard traité (transmise par le formulaire)
     date_str = request.POST.get('date_versement')
+
     if date_str:
         try:
             date_choisie = datetime.date.fromisoformat(date_str)
@@ -468,19 +475,37 @@ def apercu_versement(request):
         droits = Decimal('0')
         montant_a_verser = total_jour
 
-    numero = generer_numero_emission(crma, bl, type_versement, date_choisie)
-    montant_lettres = montant_en_lettres(montant_a_verser)
-
-    bon = BonVersement.objects.create(
+    # ── Chercher un brouillon existant pour ce BL/date/type ──
+    bon = BonVersement.objects.filter(
         bureau_local=bl,
-        emis_par=request.user,
-        type_versement=type_versement,
-        numero_emission=numero,
-        montant_jour=total_jour,
-        droits_poste=droits,
-        montant_a_verser=montant_a_verser,
         date_versement=date_choisie,
-    )
+        type_versement=type_versement,
+        statut='BROUILLON'
+    ).first()
+
+    if bon:
+        # Mettre à jour le brouillon existant
+        bon.montant_jour = total_jour
+        bon.droits_poste = droits
+        bon.montant_a_verser = montant_a_verser
+        bon.emis_par = request.user
+        bon.save()
+    else:
+        # Créer un nouveau brouillon
+        numero = generer_numero_emission(crma, bl, type_versement, date_choisie)
+        bon = BonVersement.objects.create(
+            bureau_local=bl,
+            emis_par=request.user,
+            type_versement=type_versement,
+            numero_emission=numero,
+            montant_jour=total_jour,
+            droits_poste=droits,
+            montant_a_verser=montant_a_verser,
+            date_versement=date_choisie,
+            statut='BROUILLON',
+        )
+
+    montant_lettres = montant_en_lettres(montant_a_verser)
 
     context = {
         'bon': bon,
@@ -488,7 +513,7 @@ def apercu_versement(request):
         'crma': crma,
         'user': request.user,
         'montant_lettres': montant_lettres,
-        'aujourd_hui': date_choisie,   # Date affichée sur le document
+        'aujourd_hui': date_choisie,
         'type_versement': type_versement,
     }
 
@@ -496,12 +521,59 @@ def apercu_versement(request):
         return render(request, 'core/bon_ccp.html', context)
     else:
         return render(request, 'core/bon_bancaire.html', context)
-    
+
+@role_required('utilisateur')
+def confirmer_bon(request, pk):
+    """Passe un bon du statut BROUILLON à CONFIRMÉ (action irréversible)."""
+    if request.method != 'POST':
+        return redirect('historique_bons')
+
+    bl = request.user.profil.bureau_local
+    bon = get_object_or_404(
+        BonVersement, pk=pk, bureau_local=bl, statut='BROUILLON'
+    )
+    bon.statut = 'CONFIRME'
+    bon.save()
+    messages.success(
+        request,
+        f"Bon {bon.numero_emission} confirmé. Il est maintenant figé dans l'historique."
+    )
+    return redirect('historique_bons')
+
+
+@role_required('utilisateur')
+def editer_bon(request, pk):
+    """
+    Annule un bon confirmé et redirige vers la page de choix
+    pour en recréer un nouveau (l'ancien reste dans l'historique en grisé).
+    """
+    if request.method != 'POST':
+        return redirect('historique_bons')
+
+    bl = request.user.profil.bureau_local
+    bon = get_object_or_404(
+        BonVersement, pk=pk, bureau_local=bl, statut='CONFIRME'
+    )
+
+    # Annuler l'ancien bon
+    bon.statut = 'ANNULE'
+    bon.annule_par = request.user
+    bon.annule_le = timezone.now()
+    bon.save()
+
+    messages.info(
+        request,
+        f"Bon {bon.numero_emission} annulé. "
+        f"Vous pouvez maintenant en générer un nouveau pour la même date."
+    )
+
+    # Rediriger vers la page de choix pour cette date
+    return redirect(f"{reverse('choisir_versement')}?date={bon.date_versement.isoformat()}")
+
+
 @login_required
 def historique_bons(request):
-    """
-    Historique des bons selon le rôle de l'utilisateur connecté.
-    """
+    """Historique des bons — inclut les annulés (affichés en grisé)."""
     try:
         role = request.user.profil.role
     except Exception:
@@ -515,10 +587,10 @@ def historique_bons(request):
         bons = BonVersement.objects.filter(
             bureau_local__crma=request.user.profil.crma
         )
-    else:  # superuser
+    else:
         bons = BonVersement.objects.all()
 
-    # Filtres optionnels par date
+    # Filtres
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
     type_filtre = request.GET.get('type_versement')
@@ -531,10 +603,13 @@ def historique_bons(request):
         bons = bons.filter(type_versement=type_filtre)
 
     bons = bons.select_related(
-        'bureau_local', 'bureau_local__crma', 'emis_par'
+        'bureau_local', 'bureau_local__crma', 'emis_par', 'annule_par'
     ).order_by('-date_emission', '-id')
 
-    total_periode = sum(b.montant_a_verser for b in bons)
+    # Total = uniquement les bons CONFIRMÉS (les annulés ne comptent pas)
+    total_periode = sum(
+        b.montant_a_verser for b in bons if b.statut == 'CONFIRME'
+    )
 
     return render(request, 'core/historique_bons.html', {
         'bons': bons,
@@ -543,7 +618,6 @@ def historique_bons(request):
         'date_fin': date_fin or '',
         'type_filtre': type_filtre or '',
     })
-
 
 @login_required
 def reimprimer_bon(request, pk):

@@ -35,4 +35,7 @@ urlpatterns = [
     path('utilisateurs/<int:pk>/muter/', views.utilisateur_muter, name='utilisateur_muter'),
     # URL de réactivation
     path('utilisateurs/<int:pk>/reactiver/', views.utilisateur_reactiver, name='utilisateur_reactiver'),
+    
+    path('versement/<int:pk>/confirmer/', views.confirmer_bon, name='confirmer_bon'),
+    path('versement/<int:pk>/editer/', views.editer_bon, name='editer_bon'),
 ]

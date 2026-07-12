@@ -1,5 +1,4 @@
 from django.contrib import admin
-from .models import CRMA, BureauLocal, Profil, LigneEncaissement
 from .models import CRMA, BureauLocal, Profil, LigneEncaissement, BonVersement, HistoriqueMutation
 
 @admin.register(CRMA)

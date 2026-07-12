@@ -2,8 +2,33 @@
 {% block titre %}Ordre de versement {{ type_versement }} — {{ bon.numero_emission }}{% endblock %}
 {% block contenu %}
 
-<div class="no-print" style="margin-bottom:1rem; display:flex; gap:1rem;">
+<div class="no-print" style="margin-bottom:1rem; display:flex; gap:1rem; flex-wrap:wrap; align-items:center;">
+
+    {% if bon.statut == 'BROUILLON' %}
+    <form method="post" action="{% url 'confirmer_bon' bon.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-vert"
+                onclick="return confirm('Confirmer ce bon ? Il sera figé dans l\'historique officiel.')">
+            ✓ Confirmer ce bon (fin de journée)
+        </button>
+    </form>
+    <span style="color:#d35400; font-size:0.85rem; font-style:italic;">
+        ⚠ Brouillon — non enregistré définitivement
+    </span>
+    {% elif bon.statut == 'CONFIRME' %}
     <button onclick="window.print()" class="btn btn-bleu">🖨️ Imprimer</button>
+    <form method="post" action="{% url 'editer_bon' bon.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-orange"
+                onclick="return confirm('Éditer ce bon ? L\'ancien sera annulé et vous pourrez en créer un nouveau.')">
+            ✏️ Éditer (annuler et recréer)
+        </button>
+    </form>
+    <span style="color:#1e8449; font-size:0.85rem; font-weight:bold;">
+        ✓ Bon confirmé
+    </span>
+    {% endif %}
+
     <a href="{% url 'brouillard' %}" class="btn btn-gris">← Retour au brouillard</a>
 </div>
 

@@ -4,15 +4,35 @@
 
 <!-- ── Barre d'actions (masquée à l'impression) ── -->
 <div class="no-print" style="display:flex; gap:0.8rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
-    <button onclick="window.print()" class="btn btn-bleu">🖨️ Imprimer sur SFP 01</button>
-    <button onclick="toggleCalibrage()" class="btn btn-vert" id="btn-calibrage">
-        ⚙️ Mode calibrage
-    </button>
-    <button onclick="sauvegarderPositions()" class="btn btn-vert" id="btn-save"
-            style="display:none;">💾 Sauvegarder positions</button>
-    <button onclick="reinitialiserPositions()" class="btn btn-rouge" id="btn-reset"
-            style="display:none;">↺ Réinitialiser</button>
-    <a href="{% url 'brouillard' %}" class="btn btn-gris">← Retour</a>
+
+    {% if bon.statut == 'BROUILLON' %}
+    <!-- Mode brouillon : on peut confirmer ou regénérer -->
+    <form method="post" action="{% url 'confirmer_bon' bon.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-vert"
+                onclick="return confirm('Confirmer ce bon ? Il sera figé et apparaîtra dans l\'historique officiel.')">
+            ✓ Confirmer ce bon (fin de journée)
+        </button>
+    </form>
+    <span style="color:#d35400; font-size:0.85rem; font-style:italic;">
+        ⚠ Brouillon — non enregistré définitivement
+    </span>
+    {% elif bon.statut == 'CONFIRME' %}
+    <!-- Mode confirmé : on peut imprimer ou éditer (annuler + recréer) -->
+    <button onclick="window.print()" class="btn btn-bleu">🖨️ Imprimer</button>
+    <form method="post" action="{% url 'editer_bon' bon.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-orange"
+                onclick="return confirm('Éditer ce bon ? L\'ancien sera annulé (grisé dans l\'historique) et vous pourrez en créer un nouveau.')">
+            ✏️ Éditer (annuler et recréer)
+        </button>
+    </form>
+    <span style="color:#1e8449; font-size:0.85rem; font-weight:bold;">
+        ✓ Bon confirmé
+    </span>
+    {% endif %}
+
+    <a href="{% url 'brouillard' %}" class="btn btn-gris">← Retour au brouillard</a>
 </div>
 
 <!-- ── Panneau calibrage (masqué par défaut) ── -->

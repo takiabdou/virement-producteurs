@@ -113,17 +113,17 @@ class BonVersement(models.Model):
         ('BADR', 'Virement BADR'),
         ('BNA', 'Virement BNA'),
     ]
+    STATUT_CHOICES = [
+        ('BROUILLON', 'Brouillon'),
+        ('CONFIRME', 'Confirmé'),
+        ('ANNULE', 'Annulé'),
+    ]
 
     bureau_local = models.ForeignKey(
-        BureauLocal,
-        on_delete=models.CASCADE,
-        related_name='bons_versement'
+        BureauLocal, on_delete=models.CASCADE, related_name='bons_versement'
     )
     emis_par = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='bons_versement'
+        User, on_delete=models.SET_NULL, null=True, related_name='bons_versement'
     )
     type_versement = models.CharField(max_length=10, choices=TYPE_CHOICES)
     numero_emission = models.CharField(max_length=50, unique=True)
@@ -133,11 +133,25 @@ class BonVersement(models.Model):
     date_emission = models.DateField(auto_now_add=True)
     date_versement = models.DateField()
 
+    # ── Nouveaux champs pour le cycle de vie ──
+    statut = models.CharField(
+        max_length=10, choices=STATUT_CHOICES, default='BROUILLON'
+    )
+    annule_par = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='bons_annules'
+    )
+    annule_le = models.DateTimeField(null=True, blank=True)
+    remplace_bon = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='remplace_par'
+    )
+
     class Meta:
         ordering = ['-date_emission', '-id']
 
     def __str__(self):
-        return f"{self.numero_emission} — {self.montant_a_verser} DA"
+        return f"{self.numero_emission} — {self.montant_a_verser} DA [{self.statut}]"
     
 class HistoriqueMutation(models.Model):
     profil = models.ForeignKey(
