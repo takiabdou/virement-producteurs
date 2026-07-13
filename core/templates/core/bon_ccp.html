@@ -1,261 +1,180 @@
 {% extends 'core/base.html' %}
-{% block titre %}Bon CCP — {{ bon.numero_emission }}{% endblock %}
+{% block titre %}
+  Bon CCP — {{ bon.numero_emission }}
+{% endblock %}
+
 {% block contenu %}
+  <!-- ── Barre d'actions (masquée à l'impression) ─ -->
+  <div class="no-print" style="display:flex; gap:0.8rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
+    <button onclick="window.print()" class="btn btn-bleu">🖨️ Imprimer sur SFP 01</button>
+    <button onclick="toggleCalibrage()" class="btn btn-vert" id="btn-calibrage">⚙️ Mode calibrage</button>
+    <button onclick="sauvegarderPositions()" class="btn btn-vert" id="btn-save" style="display:none;">💾 Sauvegarder positions</button>
+    <button onclick="reinitialiserPositions()" class="btn btn-rouge" id="btn-reset" style="display:none;">↺ Réinitialiser</button>
+    <a href="{% url 'brouillard' %}" class="btn btn-gris">← Retour</a>
+  </div>
 
-<!-- ── Barre d'actions (masquée à l'impression) ── -->
-<div class="no-print" style="display:flex; gap:0.8rem; margin-bottom:1rem; flex-wrap:wrap; align-items:center;">
-
-    {% if bon.statut == 'BROUILLON' %}
-    <!-- Mode brouillon : on peut confirmer ou regénérer -->
-    <form method="post" action="{% url 'confirmer_bon' bon.pk %}" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-vert"
-                onclick="return confirm('Confirmer ce bon ? Il sera figé et apparaîtra dans l\'historique officiel.')">
-            ✓ Confirmer ce bon (fin de journée)
-        </button>
-    </form>
-    <span style="color:#d35400; font-size:0.85rem; font-style:italic;">
-        ⚠ Brouillon — non enregistré définitivement
-    </span>
-    {% elif bon.statut == 'CONFIRME' %}
-    <!-- Mode confirmé : on peut imprimer ou éditer (annuler + recréer) -->
-    <button onclick="window.print()" class="btn btn-bleu">🖨️ Imprimer</button>
-    <form method="post" action="{% url 'editer_bon' bon.pk %}" style="display:inline;">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-orange"
-                onclick="return confirm('Éditer ce bon ? L\'ancien sera annulé (grisé dans l\'historique) et vous pourrez en créer un nouveau.')">
-            ✏️ Éditer (annuler et recréer)
-        </button>
-    </form>
-    <span style="color:#1e8449; font-size:0.85rem; font-weight:bold;">
-        ✓ Bon confirmé
-    </span>
-    {% endif %}
-
-    <a href="{% url 'brouillard' %}" class="btn btn-gris">← Retour au brouillard</a>
-</div>
-
-<!-- ── Panneau calibrage (masqué par défaut) ── -->
-<div class="no-print" id="panneau-calibrage" style="display:none;
+  <!-- ── Panneau calibrage (masqué par défaut) ── -->
+  <div class="no-print" id="panneau-calibrage" style="display:none;
      background:#1a5276; color:white; padding:1rem; border-radius:6px;
      margin-bottom:1rem; font-size:0.85rem;">
-    <strong>Mode calibrage actif</strong> — Cliquez sur un champ pour le sélectionner,
-    puis déplacez-le à la souris ou utilisez les touches fléchées (±1mm) ou
-    Maj+flèches (±0.1mm). Les positions sont en millimètres depuis le coin
-    supérieur gauche de la feuille A4.
-    <div id="info-champ" style="margin-top:0.5rem; font-family:monospace;
-         background:rgba(255,255,255,0.1); padding:0.5rem; border-radius:4px;">
-        Aucun champ sélectionné
-    </div>
-</div>
+    <strong>Mode calibrage actif</strong> — Cliquez sur un champ pour le sélectionner, puis déplacez-le à la souris ou utilisez les touches fléchées (±1mm) ou Maj+flèches (±0.1mm). Les positions sont en millimètres depuis le coin supérieur gauche de la feuille A4.<div id="info-champ" style="margin-top:0.5rem; font-family:monospace;
+         background:rgba(255,255,255,0.1); padding:0.5rem; border-radius:4px;">Aucun champ sélectionné</div>
+  </div>
 
-<!-- ── Aperçu écran ── -->
-<div class="no-print card" style="margin-bottom:1rem;">
+  <!-- ── Aperçu écran ── -->
+  <div class="no-print card" style="margin-bottom:1rem;">
     <h3 style="color:#1a5276; margin-bottom:1rem;">Récapitulatif du bon</h3>
     <table style="font-size:0.88rem; width:100%;">
-        <tr><td style="padding:0.3rem 1rem 0.3rem 0; color:#555; width:200px;">N° émission</td>
-            <td><strong>{{ bon.numero_emission }}</strong></td></tr>
-        <tr><td style="color:#555;">Compte CCP / Clé</td>
-            <td><strong>{{ crma.ccp_compte }} / {{ crma.ccp_cle }}</strong></td></tr>
-        <tr><td style="color:#555;">Total jour</td>
-            <td>{{ bon.montant_jour|floatformat:2 }} DA
-            (droits : {{ bon.droits_poste|floatformat:2 }} DA)</td></tr>
-        <tr><td style="color:#555;">Net à verser</td>
-            <td><strong style="color:#1a5276; font-size:1.1rem;">
-                {{ bon.montant_a_verser|floatformat:2 }} DA</strong></td></tr>
-        <tr><td style="color:#555;">En lettres</td>
-            <td><em>{{ montant_lettres }}</em></td></tr>
-        <tr><td style="color:#555;">Expéditeur</td>
-            <td>{{ user.last_name|upper }} {{ user.first_name }} —
-                {{ bl.adresse }}</td></tr>
-        <tr><td style="color:#555;">Bénéficiaire</td>
-            <td>{{ crma.nom }}</td></tr>
-        <tr><td style="color:#555;">Date</td>
-            <td>{{ aujourd_hui|date:"d/m/Y" }}</td></tr>
+      <tr>
+        <td style="padding:0.3rem 1rem 0.3rem 0; color:#555; width:200px;">N° émission</td>
+        <td>
+          <strong>{{ bon.numero_emission }}</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:#555;">Compte CCP / Clé</td>
+        <td>
+          <strong>{{ crma.ccp_compte }} / {{ crma.ccp_cle }}</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:#555;">Total jour</td>
+        <td>{{ bon.montant_jour|floatformat:2 }} DA (droits : {{ bon.droits_poste|floatformat:2 }} DA)</td>
+      </tr>
+      <tr>
+        <td style="color:#555;">Net à verser</td>
+        <td>
+          <strong style="color:#1a5276; font-size:1.1rem;">{{ bon.montant_a_verser|floatformat:2 }} DA</strong>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:#555;">En lettres</td>
+        <td>
+          <em>{{ montant_lettres }}</em>
+        </td>
+      </tr>
+      <tr>
+        <td style="color:#555;">Expéditeur</td>
+        <td>{{ user.last_name|upper }} {{ user.first_name }} —
+          {{ bl.adresse }}</td>
+      </tr>
+      <tr>
+        <td style="color:#555;">Bénéficiaire</td>
+        <td>{{ crma.nom }}</td>
+      </tr>
+      <tr>
+        <td style="color:#555;">Date</td>
+        <td>{{ aujourd_hui|date:'d/m/Y' }}</td>
+      </tr>
     </table>
-</div>
+  </div>
 
-<!-- ══════════════════════════════════════════════════════════
-     PAGE D'IMPRESSION — positionnement absolu sur SFP 01
+  <!--  ══════════════════════════════════════════════════════════
+     PAGE D'IMPRESSION — positions calibrées
      Coordonnées en mm depuis coin supérieur gauche feuille A4
-     ══════════════════════════════════════════════════════ -->
-<div id="page-sfp01" class="print-only">
+══════════════════════════════════════════════════════════  -->
+  <div id="page-sfp01" class="print-only">
+    <span class="champ" id="c-numero" data-id="c-numero" data-label="N° émission" style="left:38.9mm; top:23.6mm; width:75mm; font-size:8pt;">{{ bon.numero_emission }}</span>
+    <span class="champ" id="c-compte" data-id="c-compte" data-label="Compte CCP" style="left:103.8mm; top:23.1mm; width:52mm; font-size:9pt;">{{ crma.ccp_compte }}</span>
+    <span class="champ" id="c-cle" data-id="c-cle" data-label="Clé CCP" style="left:148mm; top:22.8mm; width:18mm; font-size:9pt;">{{ crma.ccp_cle }}</span>
+    <span class="champ" id="c-coche" data-id="c-coche" data-label="Coche Versement CCP" style="left:7.6mm; top:48.6mm; font-size:10pt; font-weight:bold;">✓</span>
+    <span class="champ" id="c-montant" data-id="c-montant" data-label="Montant en chiffres" style="left:74.5mm; top:34.7mm; width:58mm; font-size:10pt;
+                 font-weight:bold; text-align:right;">{{ bon.montant_a_verser|floatformat:2 }}</span>
+    <span class="champ" id="c-lettres" data-id="c-lettres" data-label="Montant en lettres" style="left:112.2mm; top:47mm; width:4cm; height:1.5cm; display:block;
+                 white-space:normal; line-height:1.3;">{{ montant_lettres }}</span>
+    <span class="champ" id="c-nom" data-id="c-nom" data-label="Nom expéditeur" style="left:21mm; top:76.2mm; width:88mm; font-size:8.5pt;">{{ user.last_name|upper }}</span>
+    <span class="champ" id="c-prenom" data-id="c-prenom" data-label="Prénom expéditeur" style="left:21mm; top:79.9mm; width:88mm; font-size:8.5pt;">{{ user.first_name }}</span>
+    <span class="champ" id="c-adresse" data-id="c-adresse" data-label="Adresse BL" style="left:21.1mm; top:84mm; width:88mm; font-size:8pt;">{{ bl.adresse }}</span>
+    <span class="champ" id="c-tel" data-id="c-tel" data-label="Téléphone" style="left:20.8mm; top:88.9mm; width:88mm; font-size:8.5pt;">{{ user.profil.telephone }}</span>
+    <span class="champ" id="c-email" data-id="c-email" data-label="Email" style="left:20.6mm; top:91.2mm; width:88mm; font-size:8pt;">{{ user.email }}</span>
+    <span class="champ" id="c-ben-compte" data-id="c-ben-compte" data-label="Compte bénéficiaire" style="left:125.6mm; top:70.7mm; width:45mm; font-size:8.5pt;">{{ crma.ccp_compte }}</span>
+    <span class="champ" id="c-ben-cle" data-id="c-ben-cle" data-label="Clé bénéficiaire" style="left:154.6mm; top:70.7mm; width:15mm; font-size:8.5pt;">{{ crma.ccp_cle }}</span>
+    <span class="champ" id="c-ben-nom" data-id="c-ben-nom" data-label="Nom bénéficiaire" style="left:107.4mm; top:81.9mm; width:80mm; font-size:8pt;">{{ crma.nom }}</span>
+    <span class="champ" id="c-motif" data-id="c-motif" data-label="Motif" style="left:19.8mm; top:106.6mm; width:85mm; font-size:8.5pt;">Versement CCP</span>
+    <span class="champ" id="c-date" data-id="c-date" data-label="Date" style="left:126.3mm; top:103.2mm; width:35mm;
+                 font-size:8.5pt; text-align:center;">{{ aujourd_hui|date:'d/m/Y' }}</span>
+  </div>
 
-    <span class="champ" id="c-numero"
-          data-id="c-numero" data-label="N° émission"
-          style="left:22mm; top:36mm; width:75mm; font-size:8pt;">
-        {{ bon.numero_emission }}
-    </span>
-
-    <span class="champ" id="c-compte"
-          data-id="c-compte" data-label="Compte CCP"
-          style="left:122mm; top:36mm; width:52mm; font-size:9pt;">
-        {{ crma.ccp_compte }}
-    </span>
-
-    <span class="champ" id="c-cle"
-          data-id="c-cle" data-label="Clé CCP"
-          style="left:185mm; top:36mm; width:18mm; font-size:9pt;">
-        {{ crma.ccp_cle }}
-    </span>
-
-    <span class="champ" id="c-coche"
-          data-id="c-coche" data-label="Coche Versement CCP"
-          style="left:9.5mm; top:56mm; font-size:10pt; font-weight:bold;">
-        ✓
-    </span>
-
-    <span class="champ" id="c-montant"
-          data-id="c-montant" data-label="Montant en chiffres"
-          style="left:138mm; top:48mm; width:58mm; font-size:10pt;
-                 font-weight:bold; text-align:right;">
-        {{ bon.montant_a_verser|floatformat:2 }}
-    </span>
-
-    <span class="champ" id="c-lettres"
-          data-id="c-lettres" data-label="Montant en lettres"
-          style="left:108mm; top:57mm; width:4cm; height:1.5cm; display:block;
-                 white-space:normal; line-height:1.3;">
-        {{ montant_lettres }}
-    </span>
-
-    <span class="champ" id="c-nom"
-          data-id="c-nom" data-label="Nom expéditeur"
-          style="left:15mm; top:72mm; width:88mm; font-size:8.5pt;">
-        {{ user.last_name|upper }}
-    </span>
-
-    <span class="champ" id="c-prenom"
-          data-id="c-prenom" data-label="Prénom expéditeur"
-          style="left:15mm; top:78mm; width:88mm; font-size:8.5pt;">
-        {{ user.first_name }}
-    </span>
-
-    <span class="champ" id="c-adresse"
-          data-id="c-adresse" data-label="Adresse BL"
-          style="left:15mm; top:84mm; width:88mm; font-size:8pt;">
-        {{ bl.adresse }}
-    </span>
-
-    <span class="champ" id="c-tel"
-          data-id="c-tel" data-label="Téléphone"
-          style="left:15mm; top:90mm; width:88mm; font-size:8.5pt;">
-        {{ user.profil.telephone }}
-    </span>
-
-    <span class="champ" id="c-email"
-          data-id="c-email" data-label="Email"
-          style="left:15mm; top:96mm; width:88mm; font-size:8pt;">
-        {{ user.email }}
-    </span>
-
-    <span class="champ" id="c-ben-compte"
-          data-id="c-ben-compte" data-label="Compte bénéficiaire"
-          style="left:133mm; top:72mm; width:45mm; font-size:8.5pt;">
-        {{ crma.ccp_compte }}
-    </span>
-
-    <span class="champ" id="c-ben-cle"
-          data-id="c-ben-cle" data-label="Clé bénéficiaire"
-          style="left:188mm; top:72mm; width:15mm; font-size:8.5pt;">
-        {{ crma.ccp_cle }}
-    </span>
-
-    <span class="champ" id="c-ben-nom"
-          data-id="c-ben-nom" data-label="Nom bénéficiaire"
-          style="left:118mm; top:78mm; width:80mm; font-size:8pt;">
-        {{ crma.nom }}
-    </span>
-
-    <span class="champ" id="c-motif"
-          data-id="c-motif" data-label="Motif"
-          style="left:15mm; top:110mm; width:85mm; font-size:8.5pt;">
-        Versement CCP
-    </span>
-
-    <span class="champ" id="c-date"
-          data-id="c-date" data-label="Date"
-          style="left:170mm; top:110mm; width:35mm;
-                 font-size:8.5pt; text-align:center;">
-        {{ aujourd_hui|date:"d/m/Y" }}
-    </span>
-
-</div>
-
-<!-- ══ Styles ══ -->
-<style>
-.print-only { display: none; }
-
-/* ── Mode calibrage écran ── */
-#page-sfp01.calibrage-actif {
-    display: block;
-    position: relative;
-    width: 210mm;
-    min-height: 150mm;
-    background: #f8f9fa;
-    border: 2px dashed #1a5276;
-    border-radius: 4px;
-    margin: 0 auto;
-    overflow: visible;
-}
-
-.champ {
-    position: absolute;
-    color: #000080;
-    font-family: Arial, sans-serif;
-    font-size: 9pt;
-    line-height: 1.2;
-    cursor: default;
-    user-select: none;
-    box-sizing: border-box;
-}
-
-/* Champ en mode calibrage */
-#page-sfp01.calibrage-actif .champ {
-    cursor: grab;
-    border: 1px dashed #aaa;
-    padding: 1px 3px;
-    background: rgba(255,255,255,0.85);
-    border-radius: 2px;
-    transition: border-color 0.1s;
-}
-
-#page-sfp01.calibrage-actif .champ:hover {
-    border-color: #1a5276;
-    background: rgba(234,240,251,0.95);
-    z-index: 10;
-}
-
-#page-sfp01.calibrage-actif .champ.selectionne {
-    border: 2px solid #c0392b;
-    background: rgba(253,237,236,0.95);
-    cursor: grabbing;
-    z-index: 20;
-    box-shadow: 0 2px 8px rgba(192,57,43,0.3);
-}
-
-/* ── Impression ── */
-@media print {
-    body * { visibility: hidden; }
-    #page-sfp01, #page-sfp01 * { visibility: visible; }
-
-    @page {
+  <!-- ══ Styles ══ -->
+  <style>
+    .print-only {
+      display: none;
+    }
+    
+    /* ─ Mode calibrage écran ── */
+    #page-sfp01.calibrage-actif {
+      display: block;
+      position: relative;
+      width: 210mm;
+      min-height: 150mm;
+      background: #f8f9fa;
+      border: 2px dashed #1a5276;
+      border-radius: 4px;
+      margin: 0 auto;
+      overflow: visible;
+    }
+    
+    .champ {
+      position: absolute;
+      color: #000080;
+      font-family: Arial, sans-serif;
+      font-size: 9pt;
+      line-height: 1.2;
+      cursor: default;
+      user-select: none;
+      box-sizing: border-box;
+    }
+    
+    /* Champ en mode calibrage */
+    #page-sfp01.calibrage-actif .champ {
+      cursor: grab;
+      border: 1px dashed #aaa;
+      padding: 1px 3px;
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 2px;
+      transition: border-color 0.1s;
+    }
+    
+    #page-sfp01.calibrage-actif .champ:hover {
+      border-color: #1a5276;
+      background: rgba(234, 240, 251, 0.95);
+      z-index: 10;
+    }
+    
+    #page-sfp01.calibrage-actif .champ.selectionne {
+      border: 2px solid #c0392b;
+      background: rgba(253, 237, 236, 0.95);
+      cursor: grabbing;
+      z-index: 20;
+      box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
+    }
+    
+    /* ── Impression ── */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #page-sfp01,
+      #page-sfp01 * {
+        visibility: visible;
+      }
+      @page {
         size: A4 portrait;
         margin: 0;
-    }
-
-    #page-sfp01 {
+      }
+      #page-sfp01 {
         display: block !important;
         position: fixed;
-        top: 0; left: 0;
+        top: 0;
+        left: 0;
         width: 210mm;
         height: 297mm;
-        margin: 0; padding: 0;
+        margin: 0;
+        padding: 0;
         background: transparent;
         border: none;
-    }
-
-    .champ {
+      }
+      .champ {
         position: absolute;
         color: #000080;
         font-family: Arial, sans-serif;
@@ -263,189 +182,191 @@
         background: transparent !important;
         padding: 0 !important;
         box-shadow: none !important;
+      }
+      .no-print {
+        display: none !important;
+      }
     }
+  </style>
 
-    .no-print { display: none !important; }
-}
-</style>
-
-<!-- ══ Script calibrage ══ -->
-<script>
-const CLE_STORAGE = 'sfp01_positions_v1';
-const MM_PAR_PX = 25.4 / 96; // 1px CSS = 0.2646mm à 96dpi
-
-let modeCalibrage = false;
-let champSelectionne = null;
-let offsetX = 0, offsetY = 0;
-let isDragging = false;
-
-// ── Charger positions sauvegardées ──
-function chargerPositions() {
-    try {
-        const data = localStorage.getItem(CLE_STORAGE);
-        if (!data) return;
-        const positions = JSON.parse(data);
+  <!-- Script calibrage ══ -->
+  <script>
+    const CLE_STORAGE = 'sfp01_positions_v1'
+    const MM_PAR_PX = 25.4 / 96
+    let modeCalibrage = false
+    let champSelectionne = null
+    let offsetX = 0,
+      offsetY = 0
+    let isDragging = false
+    
+    // ── Charger positions sauvegardées ──
+    function chargerPositions() {
+      try {
+        const data = localStorage.getItem(CLE_STORAGE)
+        if (!data) return
+        const positions = JSON.parse(data)
         for (const [id, pos] of Object.entries(positions)) {
-            const el = document.getElementById(id);
-            if (el) {
-                el.style.left = pos.left + 'mm';
-                el.style.top = pos.top + 'mm';
-            }
+          const el = document.getElementById(id)
+          if (el) {
+            el.style.left = pos.left + 'mm'
+            el.style.top = pos.top + 'mm'
+          }
         }
-        console.log('Positions chargées depuis la mémoire locale.');
-    } catch(e) {}
-}
-
-// ── Sauvegarder positions ──
-function sauvegarderPositions() {
-    const positions = {};
-    document.querySelectorAll('.champ').forEach(el => {
+        console.log('Positions chargées depuis la mémoire locale.')
+      } catch (e) {}
+    }
+    
+    // ── Sauvegarder positions ──
+    function sauvegarderPositions() {
+      const positions = {}
+      document.querySelectorAll('.champ').forEach((el) => {
         positions[el.id] = {
-            left: parseFloat(el.style.left),
-            top: parseFloat(el.style.top)
-        };
-    });
-    localStorage.setItem(CLE_STORAGE, JSON.stringify(positions));
-
-    // Afficher résumé
-    let resume = '📋 Positions sauvegardées :\n\n';
-    for (const [id, pos] of Object.entries(positions)) {
-        const el = document.getElementById(id);
-        const label = el ? el.dataset.label : id;
-        resume += `${label}: left=${pos.left}mm, top=${pos.top}mm\n`;
+          left: parseFloat(el.style.left),
+          top: parseFloat(el.style.top)
+        }
+      })
+      localStorage.setItem(CLE_STORAGE, JSON.stringify(positions))
+      let resume = ' Positions sauvegardées :\n'
+      for (const [id, pos] of Object.entries(positions)) {
+        const el = document.getElementById(id)
+        const label = el ? el.dataset.label : id
+        resume += `${label}: left=${pos.left}mm, top=${pos.top}mm\n`
+      }
+      alert(resume)
     }
-    alert(resume);
-}
-
-// ── Réinitialiser positions ──
-function reinitialiserPositions() {
-    if (!confirm('Réinitialiser toutes les positions aux valeurs par défaut ?')) return;
-    localStorage.removeItem(CLE_STORAGE);
-    location.reload();
-}
-
-// ── Activer/désactiver mode calibrage ──
-function toggleCalibrage() {
-    modeCalibrage = !modeCalibrage;
-    const page = document.getElementById('page-sfp01');
-    const btnSave = document.getElementById('btn-save');
-    const btnReset = document.getElementById('btn-reset');
-    const panneau = document.getElementById('panneau-calibrage');
-    const btnCal = document.getElementById('btn-calibrage');
-
-    if (modeCalibrage) {
-        page.classList.add('calibrage-actif');
-        page.style.display = 'block';
-        btnSave.style.display = 'inline-block';
-        btnReset.style.display = 'inline-block';
-        panneau.style.display = 'block';
-        btnCal.textContent = '✕ Quitter calibrage';
-        btnCal.classList.replace('btn-vert', 'btn-rouge');
-    } else {
-        page.classList.remove('calibrage-actif');
-        page.style.display = 'none';
-        btnSave.style.display = 'none';
-        btnReset.style.display = 'none';
-        panneau.style.display = 'none';
-        btnCal.textContent = '⚙️ Mode calibrage';
-        btnCal.classList.replace('btn-rouge', 'btn-vert');
-        deselectionner();
+    
+    // ── Réinitialiser positions ──
+    function reinitialiserPositions() {
+      if (!confirm('Réinitialiser toutes les positions aux valeurs par défaut ?')) return
+      localStorage.removeItem(CLE_STORAGE)
+      location.reload()
     }
-}
-
-// ── Sélectionner un champ ──
-function selectionner(el) {
-    deselectionner();
-    champSelectionne = el;
-    el.classList.add('selectionne');
-    afficherInfo();
-}
-
-function deselectionner() {
-    if (champSelectionne) {
-        champSelectionne.classList.remove('selectionne');
-        champSelectionne = null;
+    
+    // ── Activer/désactiver mode calibrage ──
+    function toggleCalibrage() {
+      modeCalibrage = !modeCalibrage
+      const page = document.getElementById('page-sfp01')
+      const btnSave = document.getElementById('btn-save')
+      const btnReset = document.getElementById('btn-reset')
+      const panneau = document.getElementById('panneau-calibrage')
+      const btnCal = document.getElementById('btn-calibrage')
+      if (modeCalibrage) {
+        page.classList.add('calibrage-actif')
+        page.style.display = 'block'
+        btnSave.style.display = 'inline-block'
+        btnReset.style.display = 'inline-block'
+        panneau.style.display = 'block'
+        btnCal.textContent = '✕ Quitter calibrage'
+        btnCal.classList.replace('btn-vert', 'btn-rouge')
+      } else {
+        page.classList.remove('calibrage-actif')
+        page.style.display = 'none'
+        btnSave.style.display = 'none'
+        btnReset.style.display = 'none'
+        panneau.style.display = 'none'
+        btnCal.textContent = '⚙️ Mode calibrage'
+        btnCal.classList.replace('btn-rouge', 'btn-vert')
+        deselectionner()
+      }
     }
-    document.getElementById('info-champ').textContent = 'Aucun champ sélectionné';
-}
-
-function afficherInfo() {
-    if (!champSelectionne) return;
-    const left = parseFloat(champSelectionne.style.left).toFixed(1);
-    const top = parseFloat(champSelectionne.style.top).toFixed(1);
-    const label = champSelectionne.dataset.label;
-    const id = champSelectionne.id;
-    document.getElementById('info-champ').textContent =
-        `[${id}] ${label} → left: ${left}mm | top: ${top}mm`;
-}
-
-// ── Drag & Drop ──
-document.querySelectorAll('.champ').forEach(el => {
-    el.addEventListener('mousedown', function(e) {
-        if (!modeCalibrage) return;
-        e.preventDefault();
-        selectionner(el);
-        isDragging = true;
-
-        const rect = el.getBoundingClientRect();
-        offsetX = e.clientX - rect.left;
-        offsetY = e.clientY - rect.top;
-    });
-});
-
-document.addEventListener('mousemove', function(e) {
-    if (!isDragging || !champSelectionne) return;
-    e.preventDefault();
-
-    const page = document.getElementById('page-sfp01');
-    const pageRect = page.getBoundingClientRect();
-
-    // Position en pixels dans la page
-    const pxX = e.clientX - pageRect.left - offsetX;
-    const pxY = e.clientY - pageRect.top - offsetY;
-
-    //
-    // Convertir en mm (1mm CSS = 3.7795px a 96dpi)
-    const mmParPxCSS = 25.4 / 96;
-    const mmX = pxX * mmParPxCSS;
-    const mmY = pxY * mmParPxCSS;
-
-    const mmXClamp = Math.max(0, Math.min(200, mmX));
-    const mmYClamp = Math.max(0, Math.min(290, mmY));
-
-    champSelectionne.style.left = mmXClamp.toFixed(1) + 'mm';
-    champSelectionne.style.top = mmYClamp.toFixed(1) + 'mm';
-    afficherInfo();
-});
-
-document.addEventListener('mouseup', function() {
-    isDragging = false;
-});
-
-document.addEventListener('keydown', function(e) {
-    if (!modeCalibrage || !champSelectionne) return;
-    const pas = e.shiftKey ? 0.1 : 1.0;
-    let left = parseFloat(champSelectionne.style.left) || 0;
-    let top = parseFloat(champSelectionne.style.top) || 0;
-    switch(e.key) {
-        case 'ArrowLeft':  left -= pas; e.preventDefault(); break;
-        case 'ArrowRight': left += pas; e.preventDefault(); break;
-        case 'ArrowUp':    top  -= pas; e.preventDefault(); break;
-        case 'ArrowDown':  top  += pas; e.preventDefault(); break;
-        case 'Escape':     deselectionner(); return;
-        default: return;
+    
+    // ── Sélectionner un champ ─
+    function selectionner(el) {
+      deselectionner()
+      champSelectionne = el
+      el.classList.add('selectionne')
+      afficherInfo()
     }
-    champSelectionne.style.left = left.toFixed(1) + 'mm';
-    champSelectionne.style.top  = top.toFixed(1)  + 'mm';
-    afficherInfo();
-});
-
-document.getElementById('page-sfp01').addEventListener('click', function(e) {
-    if (!modeCalibrage) return;
-    if (!e.target.classList.contains('champ')) deselectionner();
-});
-
-chargerPositions();
-</script>
-
+    
+    function deselectionner() {
+      if (champSelectionne) {
+        champSelectionne.classList.remove('selectionne')
+        champSelectionne = null
+      }
+      document.getElementById('info-champ').textContent = 'Aucun champ sélectionné'
+    }
+    
+    function afficherInfo() {
+      if (!champSelectionne) return
+      const left = parseFloat(champSelectionne.style.left).toFixed(1)
+      const top = parseFloat(champSelectionne.style.top).toFixed(1)
+      const label = champSelectionne.dataset.label
+      const id = champSelectionne.id
+      document.getElementById('info-champ').textContent = `[${id}] ${label} → left: ${left}mm | top: ${top}mm`
+    }
+    
+    // ── Drag & Drop ──
+    document.querySelectorAll('.champ').forEach((el) => {
+      el.addEventListener('mousedown', function (e) {
+        if (!modeCalibrage) return
+        e.preventDefault()
+        selectionner(el)
+        isDragging = true
+        const rect = el.getBoundingClientRect()
+        offsetX = e.clientX - rect.left
+        offsetY = e.clientY - rect.top
+      })
+    })
+    
+    document.addEventListener('mousemove', function (e) {
+      if (!isDragging || !champSelectionne) return
+      e.preventDefault()
+      const page = document.getElementById('page-sfp01')
+      const pageRect = page.getBoundingClientRect()
+      const pxX = e.clientX - pageRect.left - offsetX
+      const pxY = e.clientY - pageRect.top - offsetY
+      const mmParPxCSS = 25.4 / 96
+      const mmX = pxX * mmParPxCSS
+      const mmY = pxY * mmParPxCSS
+      const mmXClamp = Math.max(0, Math.min(200, mmX))
+      const mmYClamp = Math.max(0, Math.min(290, mmY))
+      champSelectionne.style.left = mmXClamp.toFixed(1) + 'mm'
+      champSelectionne.style.top = mmYClamp.toFixed(1) + 'mm'
+      afficherInfo()
+    })
+    
+    document.addEventListener('mouseup', function () {
+      isDragging = false
+    })
+    
+    document.addEventListener('keydown', function (e) {
+      if (!modeCalibrage || !champSelectionne) return
+      const pas = e.shiftKey ? 0.1 : 1.0
+      let left = parseFloat(champSelectionne.style.left) || 0
+      let top = parseFloat(champSelectionne.style.top) || 0
+      switch (e.key) {
+        case 'ArrowLeft':
+          left -= pas
+          e.preventDefault()
+          break
+        case 'ArrowRight':
+          left += pas
+          e.preventDefault()
+          break
+        case 'ArrowUp':
+          top -= pas
+          e.preventDefault()
+          break
+        case 'ArrowDown':
+          top += pas
+          e.preventDefault()
+          break
+        case 'Escape':
+          deselectionner()
+          return
+        default:
+          return
+      }
+      champSelectionne.style.left = left.toFixed(1) + 'mm'
+      champSelectionne.style.top = top.toFixed(1) + 'mm'
+      afficherInfo()
+    })
+    
+    document.getElementById('page-sfp01').addEventListener('click', function (e) {
+      if (!modeCalibrage) return
+      if (!e.target.classList.contains('champ')) deselectionner()
+    })
+    
+    chargerPositions()
+  </script>
 {% endblock %}
